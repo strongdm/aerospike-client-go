@@ -493,6 +493,11 @@ func (ctn *Connection) isIdle() bool {
 	return ctn.idleTimeout > 0 && time.Now().After(ctn.idleDeadline)
 }
 
+// willBeIdleIn returns true if the connection will be idle before the next interval
+func (ctn *Connection) willBeIdleIn(tendInterval time.Duration) bool {
+	return ctn.idleTimeout > 0 && time.Now().Add(tendInterval).After(ctn.idleDeadline)
+}
+
 // refresh extends the idle deadline of the connection.
 func (ctn *Connection) refresh() {
 	ctn.idleDeadline = time.Now().Add(ctn.idleTimeout)

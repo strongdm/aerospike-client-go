@@ -403,7 +403,9 @@ func (nd *Node) refreshFailed(e Error) {
 // if that connection is idle, it drops it and takes the next one until it picks
 // a fresh connection or exhaust the queue.
 func (nd *Node) dropIdleConnections() {
-	nd.connections.DropIdle()
+	if nd.cluster != nil {
+		nd.connections.DropIdle(nd.cluster.clientPolicy.TendInterval)
+	}
 }
 
 // GetConnection gets a connection to the node.
