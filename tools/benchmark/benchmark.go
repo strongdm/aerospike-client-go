@@ -76,10 +76,10 @@ var keyFilePassphrase = flag.String("keyFilePass", "", `Passphrase for encrypted
 var binDef = flag.String("o", "I", "Bin object specification.\n\tI\t: Read/write integer bin.\n\tB:200\t: Read/write byte array bin of length 200.\n\tS:50\t: Read/write string bin of length 50.")
 var concurrency = flag.Int("c", 32, "Number of goroutines to generate load.")
 var workloadDef = flag.String("w", "I:100", "Desired workload.\n\tI:60\t: Linear 'insert' workload initializing 60% of the keys.\n\tRU:80\t: Random read/update workload with 80% reads and 20% writes.")
-var latency = flag.String("L", "", "Latency <columns>,<shift>.\n\tShow transaction latency percentages using elapsed time ranges.\n\t<columns> Number of elapsed time ranges.\n\t<shift>   Power of 2 multiple between each range starting at column 3.")
+var latency = flag.String("L", "", "Latency <columns>,<shift>.\n\tShow command latency percentages using elapsed time ranges.\n\t<columns> Number of elapsed time ranges.\n\t<shift>   Power of 2 multiple between each range starting at column 3.")
 var throughput = flag.Int64("g", 0, "Throttle transactions per second to a maximum value.\n\tIf tps is zero, do not throttle throughput.")
 var timeout = flag.Int("T", 0, "Read/Write timeout in milliseconds.")
-var maxRetries = flag.Int("maxRetries", 2, "Maximum number of retries before aborting the current transaction.")
+var maxRetries = flag.Int("maxRetries", 2, "Maximum number of retries before aborting the current command.")
 var connQueueSize = flag.Int("queueSize", 128, "Maximum number of connections to pool.")
 var maxErrorRate = flag.Int("maxErrorRate", 50, "Maximum Error Rate for the Circuit-Breaker to trigger.")
 var errorRateWindow = flag.Int("errorRateWindow", 1, "Error Rate Window for the Circuit-Breaker to trigger.")
@@ -694,7 +694,7 @@ func min(a, b int64) int64 {
 	return b
 }
 
-// listens to transaction report channel, and print them out on intervals
+// listens to command report channel, and print them out on intervals
 func reporter() {
 	var totalWCount, totalRCount int
 	var totalWErrCount, totalRErrCount int

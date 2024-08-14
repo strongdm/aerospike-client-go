@@ -217,7 +217,7 @@ func (cmd *batchCommandGet) parseRecord(key *Key, opCount int, generation, expir
 	return newRecord(cmd.node, key, bins, generation, expiration), nil
 }
 
-func (cmd *batchCommandGet) transactionType() transactionType {
+func (cmd *batchCommandGet) commandType() commandType {
 	return ttBatchRead
 }
 

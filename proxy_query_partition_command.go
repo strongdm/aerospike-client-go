@@ -69,7 +69,7 @@ func (cmd *grpcQueryPartitionCommand) shouldRetry(e Error) bool {
 	panic(unreachable)
 }
 
-func (cmd *grpcQueryPartitionCommand) transactionType() transactionType {
+func (cmd *grpcQueryPartitionCommand) commandType() commandType {
 	return ttQuery
 }
 

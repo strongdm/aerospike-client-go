@@ -67,7 +67,7 @@ type BatchRecord struct {
 	// Err encapsulates the possible error chain for this key
 	Err Error
 
-	// InDoubt signifies the possiblity that the write transaction may have completed even though an error
+	// InDoubt signifies the possiblity that the write command may have completed even though an error
 	// occurred for this record. This may be the case when a client error occurs (like timeout)
 	// after the command was sent to the server.
 	InDoubt bool

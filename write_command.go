@@ -111,6 +111,6 @@ func (cmd *writeCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *writeCommand) transactionType() transactionType {
+func (cmd *writeCommand) commandType() commandType {
 	return ttPut
 }

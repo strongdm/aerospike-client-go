@@ -112,7 +112,7 @@ func (cmd *batchCommandExists) parseRecordResults(ifc command, receiveSize int) 
 	return true, nil
 }
 
-func (cmd *batchCommandExists) transactionType() transactionType {
+func (cmd *batchCommandExists) commandType() commandType {
 	return ttBatchRead
 }
 

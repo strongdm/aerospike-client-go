@@ -279,7 +279,7 @@ func (clnt *Client) GetNodeNames() []string {
 //-------------------------------------------------------
 
 // Put writes record bin(s) to the server.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // If the policy is nil, the default relevant policy will be used.
 func (clnt *Client) Put(policy *WritePolicy, key *Key, binMap BinMap) Error {
@@ -293,7 +293,7 @@ func (clnt *Client) Put(policy *WritePolicy, key *Key, binMap BinMap) Error {
 }
 
 // PutBins writes record bin(s) to the server.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // This method avoids using the BinMap allocation and iteration and is lighter on GC.
 // If the policy is nil, the default relevant policy will be used.
@@ -312,7 +312,7 @@ func (clnt *Client) PutBins(policy *WritePolicy, key *Key, bins ...*Bin) Error {
 //-------------------------------------------------------
 
 // Append appends bin value's string to existing record bin values.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // This call only works for string and []byte values.
 // If the policy is nil, the default relevant policy will be used.
@@ -338,7 +338,7 @@ func (clnt *Client) AppendBins(policy *WritePolicy, key *Key, bins ...*Bin) Erro
 }
 
 // Prepend prepends bin value's string to existing record bin values.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // This call works only for string and []byte values.
 // If the policy is nil, the default relevant policy will be used.
@@ -368,7 +368,7 @@ func (clnt *Client) PrependBins(policy *WritePolicy, key *Key, bins ...*Bin) Err
 //-------------------------------------------------------
 
 // Add adds integer bin values to existing record bin values.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // This call only works for integer values.
 // If the policy is nil, the default relevant policy will be used.
@@ -398,7 +398,7 @@ func (clnt *Client) AddBins(policy *WritePolicy, key *Key, bins ...*Bin) Error {
 //-------------------------------------------------------
 
 // Delete deletes a record for specified key.
-// The policy specifies the transaction timeout.
+// The policy specifies the command timeout.
 // If the policy is nil, the default relevant policy will be used.
 func (clnt *Client) Delete(policy *WritePolicy, key *Key) (bool, Error) {
 	policy = clnt.getUsableWritePolicy(policy)
@@ -1729,14 +1729,14 @@ func (clnt *Client) MetricsEnabled() bool {
 	return clnt.cluster.MetricsEnabled()
 }
 
-// EnableMetrics enables the cluster transaction metrics gathering.
+// EnableMetrics enables the cluster command metrics gathering.
 // If the parameters for the histogram in the policy are the different from the one already
 // on the cluster, the metrics will be reset.
 func (clnt *Client) EnableMetrics(policy *MetricsPolicy) {
 	clnt.cluster.EnableMetrics(policy)
 }
 
-// DisableMetrics disables the cluster transaction metrics gathering.
+// DisableMetrics disables the cluster command metrics gathering.
 func (clnt *Client) DisableMetrics() {
 	clnt.cluster.DisableMetrics()
 }

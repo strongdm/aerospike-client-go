@@ -62,9 +62,9 @@ type nodeStats struct {
 	// Total number of times nodes were removed from the client (not the same as actual nodes removed. Network disruptions between client and server may cause a node being dropped client-side)
 	NodeRemoved iatomic.Int `json:"node-removed-count"`
 
-	// Total number of transaction retries
+	// Total number of command retries
 	TransactionRetryCount iatomic.Int `json:"transaction-retry-count"`
-	// Total number of transaction errors
+	// Total number of command errors
 	TransactionErrorCount iatomic.Int `json:"transaction-error-count"`
 
 	// Metrics for Get commands

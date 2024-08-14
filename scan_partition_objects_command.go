@@ -66,7 +66,7 @@ func (cmd *scanPartitionObjectsCommand) shouldRetry(e Error) bool {
 	return cmd.tracker != nil && cmd.tracker.shouldRetry(cmd.nodePartitions, e)
 }
 
-func (cmd *scanPartitionObjectsCommand) transactionType() transactionType {
+func (cmd *scanPartitionObjectsCommand) commandType() commandType {
 	return ttScan
 }
 

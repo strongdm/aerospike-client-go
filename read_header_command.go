@@ -101,6 +101,6 @@ func (cmd *readHeaderCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *readHeaderCommand) transactionType() transactionType {
+func (cmd *readHeaderCommand) commandType() commandType {
 	return ttGetHeader
 }

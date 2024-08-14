@@ -103,7 +103,7 @@ func (cmd *batchCommand) getPolicy(ifc command) Policy {
 	return cmd.policy
 }
 
-func (cmd *batchCommand) transactionType() transactionType {
+func (cmd *batchCommand) commandType() commandType {
 	return ttNone
 }
 

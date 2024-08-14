@@ -170,7 +170,7 @@ func (cmd *batchCommandDelete) parseRecord(rec *BatchRecord, key *Key, opCount i
 	return nil
 }
 
-func (cmd *batchCommandDelete) transactionType() transactionType {
+func (cmd *batchCommandDelete) commandType() commandType {
 	return ttBatchWrite
 }
 

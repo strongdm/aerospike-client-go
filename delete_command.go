@@ -110,6 +110,6 @@ func (cmd *deleteCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *deleteCommand) transactionType() transactionType {
+func (cmd *deleteCommand) commandType() commandType {
 	return ttDelete
 }

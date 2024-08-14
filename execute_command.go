@@ -76,6 +76,6 @@ func (cmd *executeCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *executeCommand) transactionType() transactionType {
+func (cmd *executeCommand) commandType() commandType {
 	return ttUDF
 }

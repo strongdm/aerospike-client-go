@@ -66,6 +66,6 @@ func (cmd *operateCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *operateCommand) transactionType() transactionType {
+func (cmd *operateCommand) commandType() commandType {
 	return ttOperate
 }

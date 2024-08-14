@@ -58,7 +58,7 @@ const (
 	_INFO2_GENERATION int = (1 << 2)
 	// Update if new generation >= old, good for restore.
 	_INFO2_GENERATION_GT int = (1 << 3)
-	// Transaction resulting in record deletion leaves tombstone (Enterprise only).
+	// command resulting in record deletion leaves tombstone (Enterprise only).
 	_INFO2_DURABLE_DELETE int = (1 << 4)
 	// Create only. Fail if record already exists.
 	_INFO2_CREATE_ONLY int = (1 << 5)
@@ -121,10 +121,10 @@ const (
 	_AS_MSG_TYPE_COMPRESSED    int64 = 4
 )
 
-type transactionType int
+type commandType int
 
 const (
-	ttNone transactionType = iota
+	ttNone commandType = iota
 	ttGet
 	ttGetHeader
 	ttExists
@@ -154,7 +154,7 @@ type command interface {
 	parseRecordResults(ifc command, receiveSize int) (bool, Error)
 	prepareRetry(ifc command, isTimeout bool) bool
 
-	transactionType() transactionType
+	commandType() commandType
 
 	isRead() bool
 
@@ -2578,7 +2578,7 @@ func (cmd *baseCommand) executeAt(ifc command, policy *BasePolicy, deadline time
 			if cmd.node != nil && cmd.node.cluster != nil {
 				cmd.node.cluster.maxRetriesExceededCount.GetAndIncrement()
 			}
-			applyTransactionMetrics(cmd.node, ifc.transactionType(), transStart)
+			applyTransactionMetrics(cmd.node, ifc.commandType(), transStart)
 			return chainErrors(ErrMaxRetriesExceeded.err(), errChain).iter(cmd.commandSentCounter).setInDoubt(ifc.isRead(), cmd.commandSentCounter).setNode(cmd.node)
 		}
 
@@ -2604,7 +2604,7 @@ func (cmd *baseCommand) executeAt(ifc command, policy *BasePolicy, deadline time
 					alreadyRetried, err := bc.retryBatch(bc, cmd.node.cluster, deadline, cmd.commandSentCounter)
 					if alreadyRetried {
 						// Batch was retried in separate subcommands. Complete this command.
-						applyTransactionMetrics(cmd.node, ifc.transactionType(), transStart)
+						applyTransactionMetrics(cmd.node, ifc.commandType(), transStart)
 						if err != nil {
 							return chainErrors(err, errChain).iter(cmd.commandSentCounter).setNode(cmd.node).setInDoubt(ifc.isRead(), cmd.commandSentCounter)
 						}
@@ -2676,7 +2676,7 @@ func (cmd *baseCommand) executeAt(ifc command, policy *BasePolicy, deadline time
 					isClientTimeout = true
 				}
 				// if the connection pool is empty, we still haven't tried
-				// the transaction to increase the iteration count.
+				// the command to increase the iteration count.
 				cmd.commandSentCounter--
 			}
 			logger.Logger.Debug("Node " + cmd.node.String() + ": " + err.Error())
@@ -2698,7 +2698,7 @@ func (cmd *baseCommand) executeAt(ifc command, policy *BasePolicy, deadline time
 			// Close socket to flush out possible garbage. Do not put back in pool.
 			cmd.conn.Close()
 			cmd.conn = nil
-			applyTransactionMetrics(cmd.node, ifc.transactionType(), transStart)
+			applyTransactionMetrics(cmd.node, ifc.commandType(), transStart)
 			return err
 		}
 
@@ -2721,7 +2721,7 @@ func (cmd *baseCommand) executeAt(ifc command, policy *BasePolicy, deadline time
 		// now that the deadline has been set in the buffer, compress the contents
 		if err = cmd.prepareBuffer(ifc, deadline); err != nil {
 			applyTransactionErrorMetrics(cmd.node)
-			applyTransactionMetrics(cmd.node, ifc.transactionType(), transStart)
+			applyTransactionMetrics(cmd.node, ifc.commandType(), transStart)
 			return chainErrors(err, errChain).iter(cmd.commandSentCounter).setNode(cmd.node)
 		}
 
@@ -2790,11 +2790,11 @@ func (cmd *baseCommand) executeAt(ifc command, policy *BasePolicy, deadline time
 				cmd.conn = nil
 			}
 
-			applyTransactionMetrics(cmd.node, ifc.transactionType(), transStart)
+			applyTransactionMetrics(cmd.node, ifc.commandType(), transStart)
 			return errChain.setInDoubt(ifc.isRead(), cmd.commandSentCounter)
 		}
 
-		applyTransactionMetrics(cmd.node, ifc.transactionType(), transStart)
+		applyTransactionMetrics(cmd.node, ifc.commandType(), transStart)
 
 		// in case it has grown and re-allocated, it means
 		// it was borrowed from the pool, sp put it back.
@@ -2860,7 +2860,7 @@ func deviceOverloadError(err Error) bool {
 	return err.Matches(types.DEVICE_OVERLOAD)
 }
 
-func applyTransactionMetrics(node *Node, tt transactionType, tb time.Time) {
+func applyTransactionMetrics(node *Node, tt commandType, tb time.Time) {
 	if node != nil && node.cluster.MetricsEnabled() {
 		applyMetrics(tt, &node.stats, tb)
 	}
@@ -2878,7 +2878,7 @@ func applyTransactionRetryMetrics(node *Node) {
 	}
 }
 
-func applyMetrics(tt transactionType, metrics *nodeStats, s time.Time) {
+func applyMetrics(tt commandType, metrics *nodeStats, s time.Time) {
 	d := uint64(time.Since(s).Microseconds())
 	switch tt {
 	case ttGet:

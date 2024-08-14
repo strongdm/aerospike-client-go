@@ -104,6 +104,6 @@ func (cmd *existsCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *existsCommand) transactionType() transactionType {
+func (cmd *existsCommand) commandType() commandType {
 	return ttExists
 }

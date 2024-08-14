@@ -166,7 +166,7 @@ const (
 	// OP_NOT_APPLICABLE defines the operation cannot be applied to the current bin value on the server.
 	OP_NOT_APPLICABLE ResultCode = 26
 
-	// FILTERED_OUT defines the transaction was not performed because the filter was false.
+	// FILTERED_OUT defines the command was not performed because the filter was false.
 	FILTERED_OUT ResultCode = 27
 
 	// LOST_CONFLICT defines write command loses conflict to XDR.

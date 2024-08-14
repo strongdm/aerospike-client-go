@@ -30,7 +30,7 @@ const (
 	//GU_TID FieldType = 5;
 
 	DIGEST_RIPE_ARRAY    FieldType = 6
-	TRAN_ID              FieldType = 7 // user supplied transaction id, which is simply passed back
+	TRAN_ID              FieldType = 7 // user supplied command id, which is simply passed back
 	SCAN_OPTIONS         FieldType = 8
 	SOCKET_TIMEOUT       FieldType = 9
 	RECORDS_PER_SECOND   FieldType = 10

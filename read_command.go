@@ -266,6 +266,6 @@ func (cmd *readCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *readCommand) transactionType() transactionType {
+func (cmd *readCommand) commandType() commandType {
 	return ttGet
 }

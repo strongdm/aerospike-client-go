@@ -138,6 +138,6 @@ func (cmd *touchCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *touchCommand) transactionType() transactionType {
+func (cmd *touchCommand) commandType() commandType {
 	return ttPut
 }

@@ -291,7 +291,7 @@ func (cmd *batchCommandOperate) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *batchCommandOperate) transactionType() transactionType {
+func (cmd *batchCommandOperate) commandType() commandType {
 	if cmd.isRead() {
 		return ttBatchRead
 	}
