@@ -105,7 +105,7 @@ func (cmd *batchCommandOperate) parseRecordResults(ifc command, receiveSize int)
 		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
 		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
 
-		err := cmd.skipKey(fieldCount)
+		err := cmd.parseFieldsBatch(resultCode, fieldCount, cmd.records[batchIndex])
 		if err != nil {
 			return false, err
 		}

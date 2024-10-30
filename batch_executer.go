@@ -42,3 +42,20 @@ func (clnt *Client) batchExecute(policy *BatchPolicy, batchNodes []*batchNode, c
 
 	return filteredOut, errs
 }
+
+// batchExecuteSimple Uses werrGroup to run commands using multiple goroutines,
+// and waits for their return
+func (clnt *Client) batchExecuteSimple(policy *BatchPolicy, cmds []command) Error {
+	maxConcurrentNodes := policy.ConcurrentNodes
+	if maxConcurrentNodes <= 0 {
+		maxConcurrentNodes = len(cmds)
+	}
+
+	// we need this list to count the number of filtered out records
+	weg := newWeightedErrGroup(maxConcurrentNodes)
+	for _, cmd := range cmds {
+		weg.execute(cmd)
+	}
+
+	return weg.wait()
+}

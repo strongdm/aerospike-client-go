@@ -88,6 +88,9 @@ type ClientIfc interface {
 	Truncate(policy *InfoPolicy, namespace, set string, beforeLastUpdate *time.Time) Error
 	WarmUp(count int) (int, Error)
 
+	Commit(*Txn) (CommitStatus, Error)
+	Abort(*Txn) (AbortStatus, Error)
+
 	BatchGetObjects(policy *BatchPolicy, keys []*Key, objects []interface{}) (found []bool, err Error)
 	GetObject(policy *BasePolicy, key *Key, obj interface{}) Error
 	PutObject(policy *WritePolicy, key *Key, obj interface{}) (err Error)
@@ -124,6 +127,8 @@ type ClientIfc interface {
 	GetDefaultQueryPolicy() *QueryPolicy
 	GetDefaultAdminPolicy() *AdminPolicy
 	GetDefaultInfoPolicy() *InfoPolicy
+	GetDefaultTxnVerifyPolicy() *TxnVerifyPolicy
+	GetDefaultTxnRollPolicy() *TxnRollPolicy
 
 	SetDefaultPolicy(*BasePolicy)
 	SetDefaultBatchPolicy(*BatchPolicy)
@@ -135,4 +140,6 @@ type ClientIfc interface {
 	SetDefaultQueryPolicy(*QueryPolicy)
 	SetDefaultAdminPolicy(*AdminPolicy)
 	SetDefaultInfoPolicy(*InfoPolicy)
+	SetDefaultTxnVerifyPolicy(*TxnVerifyPolicy)
+	SetDefaultTxnRollPolicy(*TxnRollPolicy)
 }

@@ -33,6 +33,10 @@ var _ Policy = &BasePolicy{}
 // BasePolicy encapsulates parameters for command policy attributes
 // used in all database operation calls.
 type BasePolicy struct {
+	// Multi-record transaction identifier (MRT). If this field is populated, the corresponding
+	// command will be included in the MRT. This field is ignored for scan/query.
+	Txn *Txn
+
 	// FilterExpression is the optional Filter Expression. Supported on Server v5.2+
 	FilterExpression *Expression
 
@@ -46,9 +50,9 @@ type BasePolicy struct {
 	//
 	// The TotalTimeout is tracked on the client and also sent to the server along
 	// with the command in the wire protocol. The client will most likely
-	// timeout first, but the server has the capability to Timeout the transaction.
+	// timeout first, but the server has the capability to Timeout the command.
 	//
-	// If TotalTimeout is not zero and TotalTimeout is reached before the transaction
+	// If TotalTimeout is not zero and TotalTimeout is reached before the command
 	// completes, the command will abort with TotalTimeout error.
 	//
 	// If TotalTimeout is zero, there will be no time limit and the command will retry
@@ -63,14 +67,14 @@ type BasePolicy struct {
 	// SocketTimeout determines network timeout for each attempt.
 	//
 	// If SocketTimeout is not zero and SocketTimeout is reached before an attempt completes,
-	// the Timeout above is checked. If Timeout is not exceeded, the transaction
+	// the Timeout above is checked. If Timeout is not exceeded, the command
 	// is retried. If both SocketTimeout and Timeout are non-zero, SocketTimeout must be less
 	// than or equal to Timeout, otherwise Timeout will also be used for SocketTimeout.
 	//
 	// Default: 30s
 	SocketTimeout time.Duration
 
-	// MaxRetries determines the maximum number of retries before aborting the current transaction.
+	// MaxRetries determines the maximum number of retries before aborting the current command.
 	// The initial attempt is not counted as a retry.
 	//
 	// If MaxRetries is exceeded, the command will abort with an error.

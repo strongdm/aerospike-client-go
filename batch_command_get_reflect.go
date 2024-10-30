@@ -28,7 +28,7 @@ func init() {
 }
 
 func parseBatchObject(
-	cmd batchObjectParsetIfc,
+	cmd batchObjectParserIfc,
 	offset int,
 	opCount int,
 	fieldCount int,

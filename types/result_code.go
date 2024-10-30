@@ -21,7 +21,10 @@ import "fmt"
 type ResultCode int
 
 const (
-	// GRPC_ERROR is wrapped and directly returned from the grpc library
+	// Multi-record transaction failed.
+	TXN_FAILED ResultCode = -22
+
+	// GRPC_ERROR is wrapped and directly returned from the grpc library.
 	GRPC_ERROR ResultCode = -21
 
 	// BATCH_FAILED means one or more keys failed in a batch.
@@ -153,10 +156,10 @@ const (
 	// FAIL_FORBIDDEN defines operation not allowed at this time.
 	FAIL_FORBIDDEN ResultCode = 22
 
-	// FAIL_ELEMENT_NOT_FOUND defines element Not Found in CDT
+	// FAIL_ELEMENT_NOT_FOUND defines element Not Found in CDT.
 	FAIL_ELEMENT_NOT_FOUND ResultCode = 23
 
-	// FAIL_ELEMENT_EXISTS defines element Already Exists in CDT
+	// FAIL_ELEMENT_EXISTS defines element Already Exists in CDT.
 	FAIL_ELEMENT_EXISTS ResultCode = 24
 
 	// ENTERPRISE_ONLY defines attempt to use an Enterprise feature on a Community server or a server
@@ -170,10 +173,26 @@ const (
 	FILTERED_OUT ResultCode = 27
 
 	// LOST_CONFLICT defines write command loses conflict to XDR.
-	LOST_CONFLICT = 28
+	LOST_CONFLICT ResultCode = 28
+
+	// MRT record blocked by a different transaction.
+	MRT_BLOCKED ResultCode = 29
+
+	// MRT read version mismatch identified during commit.
+	// Some other command changed the record outside of the transaction.
+	MRT_VERSION_MISMATCH ResultCode = 30
+
+	// MRT deadline reached without a successful commit or abort.
+	MRT_EXPIRED ResultCode = 31
 
 	// Write can't complete until XDR finishes shipping.
-	XDR_KEY_BUSY = 32
+	XDR_KEY_BUSY ResultCode = 32
+
+	// MRT was already committed.
+	MRT_COMMITTED ResultCode = 33
+
+	// MRT was already aborted.
+	MRT_ABORTED ResultCode = 34
 
 	// QUERY_END defines there are no more records left for query.
 	QUERY_END ResultCode = 50
@@ -208,7 +227,7 @@ const (
 	// EXPIRED_PASSWORD defines security credential is invalid.
 	EXPIRED_PASSWORD ResultCode = 63
 
-	// FORBIDDEN_PASSWORD defines forbidden password (e.g. recently used)
+	// FORBIDDEN_PASSWORD defines forbidden password (e.g. recently used).
 	FORBIDDEN_PASSWORD ResultCode = 64
 
 	// INVALID_CREDENTIAL defines security credential is invalid.
@@ -226,7 +245,7 @@ const (
 	// INVALID_PRIVILEGE defines privilege is invalid.
 	INVALID_PRIVILEGE ResultCode = 72
 
-	// INVALID_WHITELIST defines invalid IP address whiltelist
+	// INVALID_WHITELIST defines invalid IP address whitelist.
 	INVALID_WHITELIST = 73
 
 	// QUOTAS_NOT_ENABLED defines Quotas not enabled on server.
@@ -311,6 +330,9 @@ const (
 // ResultCodeToString returns a human readable errors message based on the result code.
 func ResultCodeToString(resultCode ResultCode) string {
 	switch ResultCode(resultCode) {
+	case TXN_FAILED:
+		return "Multi-record transaction failed"
+
 	case GRPC_ERROR:
 		return "GRPC error"
 	case BATCH_FAILED:
@@ -457,8 +479,23 @@ func ResultCodeToString(resultCode ResultCode) string {
 	case LOST_CONFLICT:
 		return "Write command loses conflict to XDR."
 
+	case MRT_BLOCKED:
+		return "MRT record blocked by a different transaction"
+
+	case MRT_VERSION_MISMATCH:
+		return "MRT read version mismatch identified during commit. Some other command changed the record outside of the transaction"
+
+	case MRT_EXPIRED:
+		return "MRT deadline reached without a successful commit or abort"
+
 	case XDR_KEY_BUSY:
 		return "Write can't complete until XDR finishes shipping."
+
+	case MRT_COMMITTED:
+		return "MRT was already committed"
+
+	case MRT_ABORTED:
+		return "MRT was already aborted"
 
 	case QUERY_END:
 		return "Query end"
@@ -599,8 +636,10 @@ func ResultCodeToString(resultCode ResultCode) string {
 
 func (rc ResultCode) String() string {
 	switch rc {
+	case TXN_FAILED:
+		return "TXN_FAILED"
 	case GRPC_ERROR:
-		return "GRPC error"
+		return "GRPC_ERROR"
 	case BATCH_FAILED:
 		return "BATCH_FAILED"
 	case NO_RESPONSE:
@@ -697,8 +736,18 @@ func (rc ResultCode) String() string {
 		return "FILTERED_OUT"
 	case LOST_CONFLICT:
 		return "LOST_CONFLICT"
+	case MRT_BLOCKED:
+		return "MRT_BLOCKED"
+	case MRT_VERSION_MISMATCH:
+		return "MRT_VERSION_MISMATCH"
+	case MRT_EXPIRED:
+		return "MRT_EXPIRED"
 	case XDR_KEY_BUSY:
 		return "XDR_KEY_BUSY"
+	case MRT_COMMITTED:
+		return "MRT_COMMITTED"
+	case MRT_ABORTED:
+		return "MRT_ABORTED"
 	case QUERY_END:
 		return "QUERY_END"
 	case SECURITY_NOT_SUPPORTED:

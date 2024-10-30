@@ -19,6 +19,7 @@ type batchAttr struct {
 	readAttr   int
 	writeAttr  int
 	infoAttr   int
+	txnAttr    int
 	expiration uint32
 	generation uint32
 	hasWrite   bool
@@ -290,4 +291,16 @@ func (ba *batchAttr) setBatchDelete(dp *BatchDeletePolicy) {
 	if dp.CommitLevel == COMMIT_MASTER {
 		ba.infoAttr |= _INFO3_COMMIT_MASTER
 	}
+}
+
+func (ba *batchAttr) setTxn(attr int) {
+	ba.filterExp = nil
+	ba.readAttr = 0
+	ba.writeAttr = _INFO2_WRITE | _INFO2_RESPOND_ALL_OPS | _INFO2_DURABLE_DELETE
+	ba.infoAttr = 0
+	ba.txnAttr = attr
+	ba.expiration = 0
+	ba.generation = 0
+	ba.hasWrite = true
+	ba.sendKey = false
 }

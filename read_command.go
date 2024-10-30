@@ -142,6 +142,13 @@ func (cmd *readCommand) parseResult(ifc command, conn *Connection) Error {
 
 	}
 
+	// on write commands
+	if !ifc.isRead() {
+		if err := cmd.parseFields(cmd.policy.Txn, resultCode, fieldCount, cmd.key, !ifc.isRead()); err != nil {
+			return err
+		}
+	}
+
 	if resultCode != 0 {
 		if resultCode == types.KEY_NOT_FOUND_ERROR {
 			return ErrKeyNotFound.err()

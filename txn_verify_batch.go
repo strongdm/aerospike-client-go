@@ -1,4 +1,4 @@
-// Copyright 2014-2022 Aerospike, Inc.
+// Copyright 2014-2024 Aerospike, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,49 +15,48 @@
 package aerospike
 
 import (
+	"reflect"
+
 	"github.com/aerospike/aerospike-client-go/v7/types"
 	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
 )
 
-type batchCommandDelete struct {
+type txnBatchVerifyCommand struct {
 	batchCommand
 
-	batchDeletePolicy *BatchDeletePolicy
-	keys              []*Key
-	records           []*BatchRecord
-	attr              *batchAttr
+	keys     []*Key
+	versions []*uint64
+	records  []*BatchRecord
 }
 
-func newBatchCommandDelete(
+func newTxnBatchVerifyCommand(
 	client clientIfc,
 	batch *batchNode,
 	policy *BatchPolicy,
-	batchDeletePolicy *BatchDeletePolicy,
 	keys []*Key,
+	versions []*uint64,
 	records []*BatchRecord,
-	attr *batchAttr,
-) *batchCommandDelete {
+) *txnBatchVerifyCommand {
 	var node *Node
 	if batch != nil {
 		node = batch.Node
 	}
 
-	res := &batchCommandDelete{
+	res := &txnBatchVerifyCommand{
 		batchCommand: batchCommand{
 			client:           client,
 			baseMultiCommand: *newMultiCommand(node, nil, false),
 			policy:           policy,
 			batch:            batch,
 		},
-		batchDeletePolicy: batchDeletePolicy,
-		keys:              keys,
-		records:           records,
-		attr:              attr,
+		keys:     keys,
+		versions: versions,
+		records:  records,
 	}
 	return res
 }
 
-func (cmd *batchCommandDelete) cloneBatchCommand(batch *batchNode) batcher {
+func (cmd *txnBatchVerifyCommand) cloneBatchCommand(batch *batchNode) batcher {
 	res := *cmd
 	res.node = batch.Node
 	res.batch = batch
@@ -65,13 +64,21 @@ func (cmd *batchCommandDelete) cloneBatchCommand(batch *batchNode) batcher {
 	return &res
 }
 
-func (cmd *batchCommandDelete) writeBuffer(ifc command) Error {
-	return cmd.setBatchOperate(cmd.policy, cmd.keys, cmd.batch, nil, nil, cmd.attr)
+func (cmd *txnBatchVerifyCommand) buf() []byte {
+	return cmd.dataBuffer
+}
+
+func (cmd *txnBatchVerifyCommand) object(index int) *reflect.Value {
+	return nil
+}
+
+func (cmd *txnBatchVerifyCommand) writeBuffer(ifc command) Error {
+	return cmd.setBatchTxnVerifyForBatchNode(cmd.policy, cmd.keys, cmd.versions, cmd.batch)
 }
 
 // Parse all results in the batch.  Add records to shared list.
 // If the record was not found, the bins will be nil.
-func (cmd *batchCommandDelete) parseRecordResults(ifc command, receiveSize int) (bool, Error) {
+func (cmd *txnBatchVerifyCommand) parseRecordResults(ifc command, receiveSize int) (bool, Error) {
 	//Parse each message response and add it to the result array
 	cmd.dataOffset = 0
 
@@ -83,14 +90,10 @@ func (cmd *batchCommandDelete) parseRecordResults(ifc command, receiveSize int) 
 
 		// The only valid server return codes are "ok" and "not found" and "filtered out".
 		// If other return codes are received, then abort the batch.
-		if resultCode != 0 {
-			if resultCode != types.KEY_NOT_FOUND_ERROR {
-				if resultCode == types.FILTERED_OUT {
-					cmd.filteredOutCnt++
-				}
-			}
-
-			if resultCode != types.KEY_NOT_FOUND_ERROR && resultCode != types.FILTERED_OUT {
+		if resultCode != 0 && resultCode != types.KEY_NOT_FOUND_ERROR {
+			if resultCode == types.FILTERED_OUT {
+				cmd.filteredOutCnt++
+			} else {
 				return false, newCustomNodeError(cmd.node, resultCode)
 			}
 		}
@@ -102,23 +105,22 @@ func (cmd *batchCommandDelete) parseRecordResults(ifc command, receiveSize int) 
 			return false, nil
 		}
 
-		generation := Buffer.BytesToUint32(cmd.dataBuffer, 6)
-		expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 10))
+		// generation := Buffer.BytesToUint32(cmd.dataBuffer, 6)
+		// expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 10))
 		batchIndex := int(Buffer.BytesToUint32(cmd.dataBuffer, 14))
 		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
-		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
-		err := cmd.parseFieldsWrite(resultCode, fieldCount, cmd.keys[batchIndex])
+		// opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
+		err := cmd.skipKey(fieldCount)
 		if err != nil {
 			return false, err
 		}
 
-		if resultCode == 0 {
-			if err = cmd.parseRecord(cmd.records[batchIndex], cmd.keys[batchIndex], opCount, generation, expiration); err != nil {
-				return false, err
-			}
+		record := cmd.records[batchIndex]
+
+		if resultCode == types.OK {
+			record.ResultCode = resultCode
 		} else {
-			cmd.records[batchIndex].Err = chainErrors(newCustomNodeError(cmd.node, resultCode), cmd.records[batchIndex].Err)
-			cmd.records[batchIndex].setError(cmd.node, resultCode, cmd.batchInDoubt(cmd.attr.hasWrite, cmd.commandSentCounter))
+			record.setError(cmd.node, resultCode, false)
 		}
 	}
 	return true, nil
@@ -126,29 +128,29 @@ func (cmd *batchCommandDelete) parseRecordResults(ifc command, receiveSize int) 
 
 // Parses the given byte buffer and populate the result object.
 // Returns the number of bytes that were parsed from the given buffer.
-func (cmd *batchCommandDelete) parseRecord(rec *BatchRecord, key *Key, opCount int, generation, expiration uint32) Error {
+func (cmd *txnBatchVerifyCommand) parseRecord(key *Key, opCount int, generation, expiration uint32) (*Record, Error) {
 	bins := make(BinMap, opCount)
 
 	for i := 0; i < opCount; i++ {
 		if err := cmd.readBytes(8); err != nil {
-			return err
+			return nil, err
 		}
 		opSize := int(Buffer.BytesToUint32(cmd.dataBuffer, 0))
 		particleType := int(cmd.dataBuffer[5])
 		nameSize := int(cmd.dataBuffer[7])
 
 		if err := cmd.readBytes(nameSize); err != nil {
-			return err
+			return nil, err
 		}
 		name := string(cmd.dataBuffer[:nameSize])
 
 		particleBytesSize := opSize - (4 + nameSize)
 		if err := cmd.readBytes(particleBytesSize); err != nil {
-			return err
+			return nil, err
 		}
 		value, err := bytesToParticle(particleType, cmd.dataBuffer, 0, particleBytesSize)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if cmd.isOperation {
@@ -166,48 +168,21 @@ func (cmd *batchCommandDelete) parseRecord(rec *BatchRecord, key *Key, opCount i
 		}
 	}
 
-	rec.setRecord(newRecord(cmd.node, key, bins, generation, expiration))
-	return nil
+	return newRecord(cmd.node, key, bins, generation, expiration), nil
 }
 
-func (cmd *batchCommandDelete) commandType() commandType {
-	return ttBatchWrite
+func (cmd *txnBatchVerifyCommand) commandType() commandType {
+	return ttBatchRead
 }
 
-func (cmd *batchCommandDelete) executeSingle(client clientIfc) Error {
-	policy := cmd.batchDeletePolicy.toWritePolicy(cmd.policy)
-	for i, key := range cmd.keys {
-		res, err := client.Operate(policy, key, DeleteOp())
-		cmd.records[i].setRecord(res)
-		if err != nil {
-			cmd.records[i].setRawError(err)
-
-			// Key not found is NOT an error for batch requests
-			if err.resultCode() == types.KEY_NOT_FOUND_ERROR {
-				continue
-			}
-
-			if err.resultCode() == types.FILTERED_OUT {
-				cmd.filteredOutCnt++
-				continue
-			}
-
-			if cmd.policy.AllowPartialResults {
-				continue
-			}
-			return err
-		}
-	}
-	return nil
+func (cmd *txnBatchVerifyCommand) executeSingle(client clientIfc) Error {
+	panic(unreachable)
 }
 
-func (cmd *batchCommandDelete) Execute() Error {
-	if len(cmd.keys) == 1 {
-		return cmd.executeSingle(cmd.client)
-	}
+func (cmd *txnBatchVerifyCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *batchCommandDelete) generateBatchNodes(cluster *Cluster) ([]*batchNode, Error) {
-	return newBatchNodeListKeys(cluster, cmd.policy, cmd.keys, nil, cmd.sequenceAP, cmd.sequenceSC, cmd.batch, false)
+func (cmd *txnBatchVerifyCommand) generateBatchNodes(cluster *Cluster) ([]*batchNode, Error) {
+	return newBatchNodeListKeys(cluster, cmd.policy, cmd.keys, cmd.records, cmd.sequenceAP, cmd.sequenceSC, cmd.batch, false)
 }

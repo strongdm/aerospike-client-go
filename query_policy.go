@@ -15,6 +15,8 @@
 package aerospike
 
 // QueryPolicy encapsulates parameters for policy attributes used in query operations.
+//
+// Inherited Policy fields Policy.Txn are ignored in query commands.
 type QueryPolicy struct {
 	MultiPolicy
 

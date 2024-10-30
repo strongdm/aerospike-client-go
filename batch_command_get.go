@@ -37,7 +37,7 @@ type batchCommandGet struct {
 	objectsFound []bool
 }
 
-type batchObjectParsetIfc interface {
+type batchObjectParserIfc interface {
 	buf() []byte
 	readBytes(int) Error
 	object(int) *reflect.Value
@@ -46,7 +46,7 @@ type batchObjectParsetIfc interface {
 // this method uses reflection.
 // Will not be set if performance flag is passed for the build.
 var batchObjectParser func(
-	cmd batchObjectParsetIfc,
+	cmd batchObjectParserIfc,
 	offset int,
 	opCount int,
 	fieldCount int,
@@ -140,7 +140,7 @@ func (cmd *batchCommandGet) parseRecordResults(ifc command, receiveSize int) (bo
 		batchIndex := int(Buffer.BytesToUint32(cmd.dataBuffer, 14))
 		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
 		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
-		err := cmd.skipKey(fieldCount)
+		err := cmd.parseFieldsRead(fieldCount, cmd.keys[batchIndex])
 		if err != nil {
 			return false, err
 		}
