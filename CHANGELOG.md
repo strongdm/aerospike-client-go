@@ -1,5 +1,12 @@
 # Change History
 
+## November 1 2024: v7.7.2
+
+  Minor fix release.
+
+- **Fixes**
+  - [CLIENT-3156] Fix an issue where rack policy always returns the master node. Resolves #455
+
 ## September 18 2024: v7.7.1
 
   Hot Fix release. This version fixes a major bug introduced in v7.7.0. You should use this release instead.
