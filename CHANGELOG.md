@@ -1,5 +1,12 @@
 # Change History
 
+## November 29 2024: v7.7.3
+
+  Minor fix release.
+
+- **Fixes**
+  - [CLIENT-3196] Parse nil keys properly in scan/query operations.
+
 ## November 1 2024: v7.7.2
 
   Minor fix release.
