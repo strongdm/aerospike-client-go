@@ -278,6 +278,19 @@ func (clnt *Client) GetNodeNames() []string {
 // Write Record Operations
 //-------------------------------------------------------
 
+// PutPayload writes the raw write/delete payload to the server.
+// The policy specifies the transaction timeout.
+// If the policy is nil, the default relevant policy will be used.
+func (clnt *Client) PutPayload(policy *WritePolicy, key *Key, payload []byte) Error {
+	policy = clnt.getUsableWritePolicy(policy)
+	command, err := newWritePayloadCommand(clnt.cluster, policy, key, payload)
+	if err != nil {
+		return err
+	}
+
+	return command.Execute()
+}
+
 // Put writes record bin(s) to the server.
 // The policy specifies the transaction timeout, record expiration and how the transaction is
 // handled when the record already exists.

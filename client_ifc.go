@@ -60,6 +60,7 @@ type ClientIfc interface {
 	Operate(policy *WritePolicy, key *Key, operations ...*Operation) (*Record, Error)
 	Prepend(policy *WritePolicy, key *Key, binMap BinMap) Error
 	PrependBins(policy *WritePolicy, key *Key, bins ...*Bin) Error
+	PutPayload(policy *WritePolicy, key *Key, payload []byte) Error
 	Put(policy *WritePolicy, key *Key, binMap BinMap) Error
 	PutBins(policy *WritePolicy, key *Key, bins ...*Bin) Error
 	Query(policy *QueryPolicy, statement *Statement) (*Recordset, Error)

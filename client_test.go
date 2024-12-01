@@ -285,6 +285,68 @@ var _ = gg.Describe("Aerospike", func() {
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 		})
 
+		gg.Context("PutPayload operations", func() {
+
+			gg.It("must put a record", func() {
+				key, err = as.NewKey(ns, set, 0)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+
+				binMap := as.BinMap{
+					"Aerospike":  "value",
+					"Aerospike1": "value2",
+				}
+
+				wcmd, err := as.NewWriteCommand(nil, wpolicy, key, nil, binMap)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+
+				err = wcmd.WriteBuffer(&wcmd)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+				payload := wcmd.Buffer()
+
+				client.Delete(nil, key)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+
+				err = client.PutPayload(nil, key, payload)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+
+				rec, err := client.Get(nil, key)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+				gm.Expect(rec.Bins).To(gm.Equal(binMap))
+			})
+
+			gg.It("must delete a record", func() {
+				key, err = as.NewKey(ns, set, 0)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+
+				binMap := as.BinMap{
+					"Aerospike":  "value",
+					"Aerospike1": "value2",
+				}
+
+				err := client.Put(nil, key, binMap)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+
+				exists, err := client.Exists(nil, key)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+				gm.Expect(exists).To(gm.BeTrue())
+
+				dcmd, err := as.NewDeleteCommand(nil, wpolicy, key)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+
+				err = dcmd.WriteBuffer(dcmd)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+				payload := dcmd.Buffer()
+
+				err = client.PutPayload(nil, key, payload)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+
+				exists, err = client.Exists(nil, key)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+				gm.Expect(exists).To(gm.BeFalse())
+			})
+
+		})
+
 		gg.Context("Put operations", func() {
 
 			gg.Context("Expiration values", func() {
