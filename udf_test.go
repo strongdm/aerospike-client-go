@@ -83,16 +83,6 @@ var _ = gg.Describe("UDF/Query tests", func() {
 	bin1 := as.NewBin("bin1", rand.Intn(math.MaxInt16))
 	bin2 := as.NewBin("bin2", 1)
 
-	gg.BeforeEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-
-		if *proxy {
-			gg.Skip("Not supported in proxy environment")
-		}
-	})
-
 	gg.It("must Register a UDF", func() {
 		regTask, err := client.RegisterUDF(wpolicy, []byte(udfBody), "udf1.lua", as.LUA)
 		gm.Expect(err).ToNot(gm.HaveOccurred())

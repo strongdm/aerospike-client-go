@@ -43,8 +43,7 @@ type baseMultiCommand struct {
 	resObjMappings map[string][]int
 	selectCases    []reflect.SelectCase
 
-	bc      bufferedConn
-	grpcEOS bool
+	bc bufferedConn
 }
 
 var multiObjectParser func(
@@ -360,7 +359,7 @@ func (cmd *baseMultiCommand) parseRecordResults(ifc command, receiveSize int) (b
 				}
 			}
 
-			if cmd.grpcEOS || !cmd.tracker.allowRecord(cmd.nodePartitions) {
+			if !cmd.tracker.allowRecord(cmd.nodePartitions) {
 				continue
 			}
 
@@ -386,7 +385,7 @@ func (cmd *baseMultiCommand) parseRecordResults(ifc command, receiveSize int) (b
 				return false, err
 			}
 
-			if cmd.grpcEOS || !cmd.tracker.allowRecord(cmd.nodePartitions) {
+			if !cmd.tracker.allowRecord(cmd.nodePartitions) {
 				continue
 			}
 

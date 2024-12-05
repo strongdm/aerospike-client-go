@@ -27,7 +27,7 @@ import (
 )
 
 func registerUDFFromFile(path, filename string) {
-	regTask, err := nativeClient.RegisterUDFFromFile(nil, path+filename+".lua", filename+".lua", as.LUA)
+	regTask, err := client.RegisterUDFFromFile(nil, path+filename+".lua", filename+".lua", as.LUA)
 	gm.Expect(err).ToNot(gm.HaveOccurred())
 
 	// wait until UDF is created
@@ -35,7 +35,7 @@ func registerUDFFromFile(path, filename string) {
 }
 
 func registerUDF(udf, moduleName string) {
-	regTask, err := nativeClient.RegisterUDF(nil, []byte(udf), moduleName, as.LUA)
+	regTask, err := client.RegisterUDF(nil, []byte(udf), moduleName, as.LUA)
 	gm.Expect(err).ToNot(gm.HaveOccurred())
 
 	// wait until UDF is created
@@ -43,7 +43,7 @@ func registerUDF(udf, moduleName string) {
 }
 
 func removeUDF(moduleName string) {
-	remTask, err := nativeClient.RemoveUDF(nil, moduleName)
+	remTask, err := client.RemoveUDF(nil, moduleName)
 	gm.Expect(err).ToNot(gm.HaveOccurred())
 
 	// wait until UDF is created
@@ -73,14 +73,6 @@ var _ = gg.Describe("Query Aggregate operations", func() {
 	createUDFs := new(sync.Once)
 
 	gg.BeforeEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-
-		if *proxy {
-			gg.Skip("Not supported in Proxy Client")
-		}
-
 		createUDFs.Do(func() {
 			registerUDFFromFile(luaPath, "sum_single_bin")
 			registerUDFFromFile(luaPath, "average")

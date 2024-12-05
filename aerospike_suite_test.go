@@ -41,15 +41,12 @@ import (
 var (
 	hosts                = flag.String("hosts", "", "Comma separated Aerospike server seed hostnames or IP addresses and ports. eg: s1:3000,s2:3000,s3:3000")
 	host                 = flag.String("h", "127.0.0.1", "Aerospike server seed hostnames or IP addresses")
-	nativeHosts          = flag.String("nh", "127.0.0.1:3000", "Native Aerospike server seed hostnames or IP addresses, used in tests for GRPC to support unsupported API")
 	port                 = flag.Int("p", 3000, "Aerospike server seed hostname or IP address port number.")
 	user                 = flag.String("U", "", "Username.")
 	password             = flag.String("P", "", "Password.")
 	authMode             = flag.String("A", "internal", "Authentication mode: internal | external")
 	useReplicas          = flag.Bool("use-replicas", false, "Aerospike will use replicas as well as master partitions.")
 	debug                = flag.Bool("debug", false, "Will set the logging level to DEBUG.")
-	proxy                = flag.Bool("proxy", false, "Will use Proxy Client.")
-	dbaas                = flag.Bool("dbaas", false, "Will run the tests for a dbaas environment.")
 	namespace            = flag.String("n", "test", "Namespace")
 	UseServicesAlternate = flag.Bool("use-services-alternate", false, "Will set ClientPolicy.UseServicesAlternate to true.")
 
@@ -61,8 +58,7 @@ var (
 
 	tlsConfig    *tls.Config
 	clientPolicy *as.ClientPolicy
-	client       as.ClientIfc
-	nativeClient *as.Client
+	client       *as.Client
 )
 
 func initTestVars() {
@@ -73,11 +69,6 @@ func initTestVars() {
 	logger := log.New(&buf, "", log.LstdFlags|log.Lshortfile)
 	logger.SetOutput(os.Stdout)
 	asl.Logger.SetLogger(logger)
-
-	// dbaas implies a proxy client, albeit with no access to a native client for test setup.
-	if *dbaas {
-		*proxy = true
-	}
 
 	if *debug {
 		asl.Logger.SetLevel(asl.DEBUG)
@@ -118,29 +109,9 @@ func initTestVars() {
 	}
 
 	log.Println("Connecting to seeds:", dbHosts)
-	if *proxy {
-		client, err = as.CreateClientWithPolicyAndHost(as.CTProxy, clientPolicy, dbHosts[0])
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-	} else {
-		nclient, err := as.NewClientWithPolicyAndHost(clientPolicy, dbHosts...)
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-		client = nclient
-		nativeClient = nclient
-	}
-
-	if *proxy && !*dbaas {
-		hosts, err := as.NewHosts(*nativeHosts)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		nativeClient, err = as.NewClientWithPolicyAndHost(clientPolicy, hosts...)
-		if err != nil {
-			log.Fatal("Error connecting the native client to the cluster", err.Error())
-		}
+	client, err = as.NewClientWithPolicyAndHost(clientPolicy, dbHosts...)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
 	defaultBatchPolicy := as.NewBatchPolicy()
@@ -159,19 +130,6 @@ func initTestVars() {
 	defaultAdminPolicy.Timeout = 15 * time.Second
 	defaultInfoPolicy := as.NewInfoPolicy()
 	defaultInfoPolicy.Timeout = 15 * time.Second
-
-	if nativeClient != nil {
-		nativeClient.SetDefaultBatchPolicy(defaultBatchPolicy)
-		nativeClient.SetDefaultBatchPolicy(defaultBatchPolicy)
-		nativeClient.SetDefaultWritePolicy(defaultWritePolicy)
-		nativeClient.SetDefaultWritePolicy(defaultWritePolicy)
-		nativeClient.SetDefaultScanPolicy(defaultScanPolicy)
-		nativeClient.SetDefaultScanPolicy(defaultScanPolicy)
-		nativeClient.SetDefaultQueryPolicy(defaultQueryPolicy)
-		nativeClient.SetDefaultQueryPolicy(defaultQueryPolicy)
-		nativeClient.SetDefaultAdminPolicy(defaultAdminPolicy)
-		nativeClient.SetDefaultInfoPolicy(defaultInfoPolicy)
-	}
 
 	client.SetDefaultBatchPolicy(defaultBatchPolicy)
 	client.SetDefaultBatchPolicy(defaultBatchPolicy)
@@ -209,11 +167,7 @@ func TestAerospike(t *testing.T) {
 }
 
 func featureEnabled(feature string) bool {
-	if *dbaas {
-		gg.Skip("Not supported in DBAAS environment")
-	}
-
-	node := nativeClient.GetNodes()[0]
+	node := client.GetNodes()[0]
 	infoMap, err := node.RequestInfo(as.NewInfoPolicy(), "features")
 	if err != nil {
 		log.Fatal("Failed to connect to aerospike: err:", err)
@@ -223,11 +177,7 @@ func featureEnabled(feature string) bool {
 }
 
 func isEnterpriseEdition() bool {
-	if *dbaas {
-		gg.Skip("Not supported in DBAAS environment")
-	}
-
-	node := nativeClient.GetNodes()[0]
+	node := client.GetNodes()[0]
 	infoMap, err := node.RequestInfo(as.NewInfoPolicy(), "edition")
 	if err != nil {
 		log.Fatal("Failed to connect to aerospike: err:", err)
@@ -237,29 +187,21 @@ func isEnterpriseEdition() bool {
 }
 
 func securityEnabled() bool {
-	if *dbaas {
-		gg.Skip("Not supported in DBAAS environment")
-	}
-
 	if !isEnterpriseEdition() {
 		return false
 	}
 
-	_, err := nativeClient.QueryRoles(nil)
+	_, err := client.QueryRoles(nil)
 	return err == nil
 }
 
 func xdrEnabled() bool {
-	if *dbaas {
-		gg.Skip("Not supported in DBAAS environment")
-	}
-
-	res := info(nativeClient, "get-config:context=xdr")
+	res := info(client, "get-config:context=xdr")
 	return len(res) > 0 && !strings.HasPrefix(res, "ERROR")
 }
 
 func nsInfo(ns string, feature string) string {
-	node := nativeClient.GetNodes()[0]
+	node := client.GetNodes()[0]
 	infoMap, err := node.RequestInfo(as.NewInfoPolicy(), "namespace/"+ns)
 	if err != nil {
 		log.Fatal("Failed to connect to aerospike: err:", err)
@@ -293,10 +235,6 @@ func info(client *as.Client, feature string) string {
 
 func initTLS() *tls.Config {
 	if len(*rootCA) == 0 && len(*certFile) == 0 && len(*keyFile) == 0 {
-		if *dbaas {
-			// if testing in dbaas environment, still enable the default TLS config
-			return &tls.Config{}
-		}
 		return nil
 	}
 
@@ -407,14 +345,10 @@ const (
 )
 
 func nsupPeriod(ns string) int {
-	if *proxy || *dbaas {
-		return 0
-	}
-
 	var pattern = `nsup-period=(?P<value>\d+)`
 	var vmeta = regexp.MustCompile(pattern)
 
-	vs := info(nativeClient, "namespace/"+ns)
+	vs := info(client, "namespace/"+ns)
 	server := findNamedMatches(vmeta, vs)
 
 	if len(server) > 0 {
@@ -427,7 +361,7 @@ func cmpServerVersion(v string) versionStatus {
 	var pattern = `(?P<v1>\d+)(\.(?P<v2>\d+)(\.(?P<v3>\d+)(\.(?P<v4>\d+))?)?)?.*`
 	var vmeta = regexp.MustCompile(pattern)
 
-	vs := info(nativeClient, "build")
+	vs := info(client, "build")
 
 	server := findNamedMatches(vmeta, vs)
 	req := findNamedMatches(vmeta, v)
@@ -471,7 +405,7 @@ func dropUser(
 	policy *as.AdminPolicy,
 	user string,
 ) {
-	err := nativeClient.DropUser(policy, user)
+	err := client.DropUser(policy, user)
 	gm.Expect(err).ToNot(gm.HaveOccurred())
 }
 
@@ -481,7 +415,7 @@ func dropIndex(
 	setName string,
 	indexName string,
 ) {
-	gm.Expect(nativeClient.DropIndex(policy, namespace, setName, indexName)).ToNot(gm.HaveOccurred())
+	gm.Expect(client.DropIndex(policy, namespace, setName, indexName)).ToNot(gm.HaveOccurred())
 
 	// time.Sleep(time.Second)
 }
@@ -494,7 +428,7 @@ func createIndex(
 	binName string,
 	indexType as.IndexType,
 ) {
-	idxTask, err := nativeClient.CreateIndex(policy, namespace, setName, indexName, binName, indexType)
+	idxTask, err := client.CreateIndex(policy, namespace, setName, indexName, binName, indexType)
 	if err != nil {
 		if !err.Matches(ast.INDEX_FOUND) {
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -519,7 +453,7 @@ func createComplexIndex(
 	ctx ...*as.CDTContext,
 ) {
 	// queries only work on indices
-	idxTask1, err := nativeClient.CreateComplexIndex(policy, namespace, setName, indexName, binName, indexType, indexCollectionType, ctx...)
+	idxTask1, err := client.CreateComplexIndex(policy, namespace, setName, indexName, binName, indexType, indexCollectionType, ctx...)
 	gm.Expect(err).ToNot(gm.HaveOccurred())
 
 	// wait until index is created

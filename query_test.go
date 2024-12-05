@@ -91,11 +91,7 @@ var _ = gg.Describe("Query operations", func() {
 	}
 
 	gg.BeforeEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-
-		nativeClient.Truncate(nil, ns, set, nil)
+		client.Truncate(nil, ns, set, nil)
 
 		keys = make(map[string]*as.Key, keyCount)
 		set = randString(50)
@@ -124,27 +120,19 @@ var _ = gg.Describe("Query operations", func() {
 	})
 
 	gg.AfterEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-
 		indexName = set + bin3.Name
-		gm.Expect(nativeClient.DropIndex(nil, ns, set, indexName)).ToNot(gm.HaveOccurred())
+		gm.Expect(client.DropIndex(nil, ns, set, indexName)).ToNot(gm.HaveOccurred())
 
 		indexName = set + bin6.Name
-		gm.Expect(nativeClient.DropIndex(nil, ns, set, indexName)).ToNot(gm.HaveOccurred())
+		gm.Expect(client.DropIndex(nil, ns, set, indexName)).ToNot(gm.HaveOccurred())
 
 		indexName = set + bin7.Name
-		gm.Expect(nativeClient.DropIndex(nil, ns, set, indexName)).ToNot(gm.HaveOccurred())
+		gm.Expect(client.DropIndex(nil, ns, set, indexName)).ToNot(gm.HaveOccurred())
 	})
 
 	var queryPolicy = as.NewQueryPolicy()
 
 	gg.It("must Query and get all records back for a specified node using Results() channel", func() {
-		if *proxy {
-			gg.Skip("Not Supported for Proxy Client")
-		}
-
 		gm.Expect(len(keys)).To(gm.Equal(keyCount))
 
 		stm := as.NewStatement(ns, set)
@@ -395,7 +383,7 @@ var _ = gg.Describe("Query operations", func() {
 	})
 
 	gg.It("must Query a specific range by applying a udf filter and get only relevant records back", func() {
-		regTask, err := nativeClient.RegisterUDF(nil, []byte(udfFilter), "udfFilter.lua", as.LUA)
+		regTask, err := client.RegisterUDF(nil, []byte(udfFilter), "udfFilter.lua", as.LUA)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 
 		// wait until UDF is created

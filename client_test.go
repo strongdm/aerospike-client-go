@@ -100,12 +100,6 @@ var _ = gg.Describe("Aerospike", func() {
 
 	gg.Describe("Client Management", func() {
 
-		gg.BeforeEach(func() {
-			if *proxy {
-				gg.Skip("Not supported in Proxy Client")
-			}
-		})
-
 		dbHost := as.NewHost(*host, *port)
 		dbHost.TLSName = *nodeTLSName
 
@@ -288,12 +282,6 @@ var _ = gg.Describe("Aerospike", func() {
 		gg.Context("Put operations", func() {
 
 			gg.Context("Expiration values", func() {
-
-				gg.BeforeEach(func() {
-					if *dbaas {
-						gg.Skip("Not supported in DBAAS environment")
-					}
-				})
 
 				gg.It("must return 30d if set to TTLServerDefault", func() {
 					wpolicy := as.NewWritePolicy(0, as.TTLServerDefault)
@@ -1726,10 +1714,6 @@ var _ = gg.Describe("Aerospike", func() {
 		gg.Context("XDR Filter", func() {
 
 			gg.BeforeEach(func() {
-				if *proxy {
-					gg.Skip("Not supported in Proxy Client")
-				}
-
 				if !xdrEnabled() {
 					gg.Skip("XDR Filter Tests are not supported in the Community Edition, or when the server is not configured for XDR")
 					return

@@ -15,7 +15,6 @@
 package aerospike
 
 import (
-	"bytes"
 	"compress/zlib"
 	"crypto/tls"
 	"io"
@@ -94,10 +93,6 @@ type Connection struct {
 	limitReader *io.LimitedReader
 
 	closer sync.Once
-
-	grpcConn         bool
-	grpcReadCallback func() ([]byte, Error)
-	grpcReader       io.ReadWriter
 }
 
 // makes sure that the connection is closed eventually, even if it is not consumed
@@ -132,18 +127,6 @@ func errToAerospikeErr(conn *Connection, err error) (aerr Error) {
 	}
 
 	return aerr
-}
-
-// newGrpcFakeConnection creates a connection that fakes a real connection for when grpc connections are required.
-// These connections only support reading to allow parsing of the returned payload.
-func newGrpcFakeConnection(payload []byte, callback func() ([]byte, Error)) *Connection {
-	buf := bytes.NewBuffer(payload)
-	return &Connection{
-		grpcConn:         true,
-		grpcReader:       buf,
-		grpcReadCallback: callback,
-		limitReader:      &io.LimitedReader{R: buf, N: 0},
-	}
 }
 
 // newConnection creates a connection on the network and returns the pointer
@@ -258,11 +241,6 @@ func (ctn *Connection) Write(buf []byte) (total int, aerr Error) {
 
 // Read reads from connection buffer to the provided slice.
 func (ctn *Connection) Read(buf []byte, length int) (total int, aerr Error) {
-	if ctn.grpcConn {
-		// grpc fake conn
-		return ctn.grpcRead(buf, length)
-	}
-
 	var err error
 
 	// if all bytes are not read, retry until successful
@@ -303,68 +281,6 @@ func (ctn *Connection) Read(buf []byte, length int) (total int, aerr Error) {
 
 	// the line should happen before .Close()
 	ctn.Close()
-
-	return total, aerr
-}
-
-// Reads the grpc payload
-func (ctn *Connection) grpcReadNext() (aerr Error) {
-	// if there is no payload set, ask for the next chunk
-	if ctn.grpcReadCallback != nil {
-		grpcPayload, err := ctn.grpcReadCallback()
-		if err != nil {
-			return err
-		}
-
-		if _, err := ctn.grpcReader.Write(grpcPayload); err != nil {
-			errToAerospikeErr(ctn, io.EOF)
-		}
-
-		if ctn.compressed {
-			ctn.limitReader.R = ctn.grpcReader
-		}
-
-		return nil
-	}
-	return errToAerospikeErr(ctn, io.EOF)
-}
-
-// Reads the grpc payload
-func (ctn *Connection) grpcRead(buf []byte, length int) (total int, aerr Error) {
-	var err error
-
-	// if all bytes are not read, retry until successful
-	// Don't worry about the loop; we've already set the timeout elsewhere
-	for total < length {
-		var r int
-		if !ctn.compressed {
-			r, err = ctn.grpcReader.Read(buf[total:length])
-		} else {
-			r, err = ctn.inflater.Read(buf[total:length])
-			if err == io.EOF && total+r == length {
-				ctn.compressed = false
-				err = ctn.inflater.Close()
-			}
-		}
-		total += r
-		if err != nil {
-			if err == io.EOF {
-				if err := ctn.grpcReadNext(); err != nil {
-					return total, err
-				}
-				continue
-			}
-			break
-		}
-	}
-
-	if total == length {
-		// If all required bytes are read, ignore any potential error.
-		// The error will bubble up on the next network io if it matters.
-		return total, nil
-	}
-
-	aerr = chainErrors(errToAerospikeErr(ctn, err), aerr)
 
 	return total, aerr
 }

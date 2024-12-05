@@ -33,11 +33,6 @@ func init() {
 
 // ALL tests are isolated by SetName and Key, which are 50 random characters
 var _ = gg.Describe("Aerospike load tests", func() {
-	gg.BeforeEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-	})
 
 	gg.Describe("Single long random string test", func() {
 		var ns = *namespace

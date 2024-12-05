@@ -27,12 +27,6 @@ import (
 // ALL tests are isolated by SetName and Key, which are 50 random characters
 var _ = gg.Describe("Index operations test", func() {
 
-	gg.BeforeEach(func() {
-		if *proxy {
-			gg.Skip("Not supported in Proxy Client")
-		}
-	})
-
 	gg.Describe("Index creation", func() {
 
 		var err error
