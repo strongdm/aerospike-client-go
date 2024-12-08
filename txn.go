@@ -45,8 +45,8 @@ type Txn struct {
 	reads          sm.Map[*Key, *uint64]
 	writes         sm.Map[*Key, struct{}]
 	namespace      *string
-	timeout        time.Duration
-	deadline       time.Time
+	timeout        int
+	deadline       int
 	monitorInDoubt bool
 	inDoubt        bool
 	rollAttempted  bool
@@ -54,6 +54,9 @@ type Txn struct {
 }
 
 // Create MRT, assign random transaction id and initialize reads/writes hashmaps with default capacities.
+//
+// The default client MRT timeout is zero. This means use the server configuration mrt-duration
+// as the MRT timeout. The default mrt-duration is 10 seconds.
 func NewTxn() *Txn {
 	return &Txn{
 		id:      createTxnId(),
@@ -261,13 +264,20 @@ func (txn *Txn) setNamespaceForBatchRecordsIfc(records []BatchRecordIfc) Error {
 }
 
 // Get MRT deadline.
-func (txn *Txn) GetDeadline() time.Time {
-	return txn.deadline
+func (txn *Txn) GetTimeout() time.Duration {
+	return time.Duration(txn.timeout) * time.Second
 }
 
-// Set MRT deadline. For internal use only.
-func (txn *Txn) SetDeadline(deadline time.Time) {
-	txn.deadline = deadline
+// Set MRT timeout in seconds. The timer starts when the MRT monitor record is
+// created.
+// This occurs when the first command in the MRT is executed. If the timeout is
+// reached before
+// a commit or abort is called, the server will expire and rollback the MRT.
+//
+// If the MRT timeout is zero, the server configuration mrt-duration is used.
+// The default mrt-duration is 10 seconds.
+func (txn *Txn) SetTimeout(timeout time.Duration) {
+	txn.timeout = int(timeout / time.Second)
 }
 
 // Get MRT inDoubt.
@@ -287,12 +297,12 @@ func (txn *Txn) SetMonitorInDoubt() {
 
 // Does MRT monitor record exist or is in doubt.
 func (txn *Txn) MonitorMightExist() bool {
-	return !txn.deadline.IsZero() || txn.monitorInDoubt
+	return txn.deadline != 0 || txn.monitorInDoubt
 }
 
 // Does MRT monitor record exist.
 func (txn *Txn) MonitorExists() bool {
-	return !txn.deadline.IsZero()
+	return txn.deadline != 0
 }
 
 // Verify that commit/abort is only attempted once. For internal use only.
@@ -307,7 +317,7 @@ func (txn *Txn) SetRollAttempted() bool {
 // Clear MRT. Remove all tracked keys.
 func (txn *Txn) Clear() {
 	txn.namespace = nil
-	txn.deadline = time.Time{}
+	txn.deadline = 0
 	txn.reads.Clear()
 	txn.writes.Clear()
 }

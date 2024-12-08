@@ -16,101 +16,65 @@ package aerospike
 
 import (
 	"github.com/aerospike/aerospike-client-go/v7/types"
-
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
 )
 
 // guarantee writeCommand implements command interface
 var _ command = &writeCommand{}
 
 type writeCommand struct {
-	singleCommand
+	baseWriteCommand
 
-	policy    *WritePolicy
 	bins      []*Bin
 	binMap    BinMap
 	operation OperationType
 }
 
-func newWriteCommand(cluster *Cluster,
+func newWriteCommand(
+	cluster *Cluster,
 	policy *WritePolicy,
 	key *Key,
 	bins []*Bin,
 	binMap BinMap,
-	operation OperationType) (writeCommand, Error) {
-
-	var partition *Partition
-	var err Error
-	if cluster != nil {
-		partition, err = PartitionForWrite(cluster, &policy.BasePolicy, key)
-		if err != nil {
-			return writeCommand{}, err
-		}
+	operation OperationType,
+) (writeCommand, Error) {
+	bwc, err := newBaseWriteCommand(cluster, policy, key)
+	if err != nil {
+		return writeCommand{}, err
 	}
 
 	newWriteCmd := writeCommand{
-		singleCommand: newSingleCommand(cluster, key, partition),
-		policy:        policy,
-		bins:          bins,
-		binMap:        binMap,
-		operation:     operation,
+		baseWriteCommand: bwc,
+		bins:             bins,
+		binMap:           binMap,
+		operation:        operation,
 	}
 
 	return newWriteCmd, nil
-}
-
-func (cmd *writeCommand) getPolicy(ifc command) Policy {
-	return cmd.policy
 }
 
 func (cmd *writeCommand) writeBuffer(ifc command) Error {
 	return cmd.setWrite(cmd.policy, cmd.operation, cmd.key, cmd.bins, cmd.binMap)
 }
 
-func (cmd *writeCommand) getNode(ifc command) (*Node, Error) {
-	return cmd.partition.GetNodeWrite(cmd.cluster)
-}
-
-func (cmd *writeCommand) prepareRetry(ifc command, isTimeout bool) bool {
-	cmd.partition.PrepareRetryWrite(isTimeout)
-	return true
-}
-
 func (cmd *writeCommand) parseResult(ifc command, conn *Connection) Error {
-	// Read header.
-	if _, err := conn.Read(cmd.dataBuffer, int(_MSG_TOTAL_HEADER_SIZE)); err != nil {
-		return err
+	resultCode, err := cmd.parseHeader()
+	if err != nil {
+		return newCustomNodeError(cmd.node, err.resultCode())
 	}
 
-	header := Buffer.BytesToInt64(cmd.dataBuffer, 0)
-
-	// Validate header to make sure we are at the beginning of a message
-	if err := cmd.validateHeader(header); err != nil {
-		return err
-	}
-
-	resultCode := cmd.dataBuffer[13] & 0xFF
-
-	if resultCode != 0 {
-		if resultCode == byte(types.KEY_NOT_FOUND_ERROR) {
+	if resultCode != types.OK {
+		if resultCode == types.KEY_NOT_FOUND_ERROR {
 			return ErrKeyNotFound.err()
-		} else if types.ResultCode(resultCode) == types.FILTERED_OUT {
+		} else if resultCode == types.FILTERED_OUT {
 			return ErrFilteredOut.err()
 		}
 
 		return newCustomNodeError(cmd.node, types.ResultCode(resultCode))
 	}
-	return cmd.emptySocket(conn)
-}
 
-func (cmd *writeCommand) isRead() bool {
-	return false
+	return nil
 }
 
 func (cmd *writeCommand) Execute() Error {
 	return cmd.execute(cmd)
-}
-
-func (cmd *writeCommand) commandType() commandType {
-	return ttPut
 }

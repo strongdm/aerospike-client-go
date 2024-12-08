@@ -50,6 +50,8 @@ func (txr *TxnRoll) Verify(verifyPolicy, rollPolicy *BatchPolicy) Error {
 				return NewTxnCommitError(CommitErrorVerifyFailAbortAbandoned, err)
 			}
 		}
+
+		return NewTxnCommitError(CommitErrorVerifyFail, err)
 	}
 	txr.txn.SetState(TxnStateVerified)
 	return nil
@@ -87,9 +89,6 @@ func (txr *TxnRoll) Commit(rollPolicy *BatchPolicy) (CommitStatus, Error) {
 	}
 
 	if txr.txn.MonitorMightExist() {
-		writePolicy := NewWritePolicy(0, 0)
-		writePolicy.BasePolicy = rollPolicy.BasePolicy
-
 		txnKey := getTxnMonitorKey(txr.txn)
 		if err := txr.Close(writePolicy, txnKey); err != nil {
 			return CommitStatusCloseAbandoned, err
@@ -114,7 +113,7 @@ func (txr *TxnRoll) Abort(rollPolicy *BatchPolicy) (AbortStatus, Error) {
 			return AbortStatusCloseAbandoned, err
 		}
 	}
-	return AbortStatusOk, nil
+	return AbortStatusOK, nil
 }
 
 func (txr *TxnRoll) VerifyRecordVersions(verifyPolicy *BatchPolicy) Error {

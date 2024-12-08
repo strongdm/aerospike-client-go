@@ -234,10 +234,7 @@ func canRepeatKeys(key *Key, keyPrev *Key, ver, verPrev *uint64) bool {
 
 func (cmd *baseCommand) setTxnAddKeys(policy *WritePolicy, key *Key, args operateArgs) Error {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, policy.SendKey)
-	if err != nil {
-		return err
-	}
+	fieldCount := cmd.estimateRawKeySize(key)
 
 	if size, err := args.size(); err != nil {
 		return err
@@ -257,13 +254,13 @@ func (cmd *baseCommand) setTxnAddKeys(policy *WritePolicy, key *Key, args operat
 	cmd.WriteByte(0)
 	cmd.WriteByte(0)
 	cmd.WriteInt32(0)
-	cmd.WriteInt32(0)
+	cmd.WriteUint32(policy.Expiration)
 	cmd.WriteInt32(0)
 	cmd.WriteInt16(int16(fieldCount))
-	cmd.WriteInt16(0)
+	cmd.WriteInt16(int16(len(args.operations)))
 	cmd.dataOffset = int(_MSG_TOTAL_HEADER_SIZE)
 
-	if err := cmd.writeKey(key, policy.SendKey); err != nil {
+	if err := cmd.writeKey(key); err != nil {
 		return err
 	}
 
@@ -279,10 +276,7 @@ func (cmd *baseCommand) setTxnAddKeys(policy *WritePolicy, key *Key, args operat
 
 func (cmd *baseCommand) setTxnVerify(policy *BasePolicy, key *Key, ver uint64) Error {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, policy.SendKey)
-	if err != nil {
-		return err
-	}
+	fieldCount := cmd.estimateRawKeySize(key)
 
 	// Version field.
 	cmd.dataOffset += int(7 + _FIELD_HEADER_SIZE)
@@ -306,7 +300,7 @@ func (cmd *baseCommand) setTxnVerify(policy *BasePolicy, key *Key, ver uint64) E
 	cmd.WriteInt16(0)
 	cmd.dataOffset = int(_MSG_TOTAL_HEADER_SIZE)
 
-	if err := cmd.writeKey(key, policy.SendKey); err != nil {
+	if err := cmd.writeKey(key); err != nil {
 		return err
 	}
 
@@ -436,10 +430,7 @@ func (cmd *baseCommand) setTxnMarkRollForward(key *Key) Error {
 	bin := NewBin("fwd", true)
 
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, false)
-	if err != nil {
-		return err
-	}
+	fieldCount := cmd.estimateRawKeySize(key)
 	cmd.estimateOperationSizeForBin(bin)
 	cmd.writeTxnMonitor(key, 0, _INFO2_WRITE, fieldCount, 1)
 	cmd.writeOperationForBin(bin, _WRITE)
@@ -449,10 +440,7 @@ func (cmd *baseCommand) setTxnMarkRollForward(key *Key) Error {
 
 func (cmd *baseCommand) setTxnRoll(key *Key, txn *Txn, txnAttr int) Error {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, false)
-	if err != nil {
-		return err
-	}
+	fieldCount := cmd.estimateRawKeySize(key)
 
 	fieldCount += cmd.sizeTxn(key, txn, false)
 
@@ -474,7 +462,7 @@ func (cmd *baseCommand) setTxnRoll(key *Key, txn *Txn, txnAttr int) Error {
 	cmd.WriteInt16(0)
 	cmd.dataOffset = int(_MSG_TOTAL_HEADER_SIZE)
 
-	if err := cmd.writeKey(key, false); err != nil {
+	if err := cmd.writeKey(key); err != nil {
 		return err
 	}
 
@@ -585,10 +573,7 @@ func (cmd *baseCommand) setBatchTxnRollForOffsets(
 
 func (cmd *baseCommand) setTxnClose(txn *Txn, key *Key) Error {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, false)
-	if err != nil {
-		return err
-	}
+	fieldCount := cmd.estimateRawKeySize(key)
 	if err := cmd.writeTxnMonitor(key, 0, _INFO2_WRITE|_INFO2_DELETE|_INFO2_DURABLE_DELETE, fieldCount, 0); err != nil {
 		return err
 	}
@@ -614,7 +599,7 @@ func (cmd *baseCommand) writeTxnMonitor(key *Key, readAttr, writeAttr, fieldCoun
 	cmd.WriteInt16(int16(opCount))
 	cmd.dataOffset = int(_MSG_TOTAL_HEADER_SIZE)
 
-	return cmd.writeKey(key, false)
+	return cmd.writeKey(key)
 }
 
 func (cmd *baseCommand) sizeTxn(key *Key, txn *Txn, hasWrite bool) int {
@@ -631,7 +616,7 @@ func (cmd *baseCommand) sizeTxn(key *Key, txn *Txn, hasWrite bool) int {
 			fieldCount++
 		}
 
-		if hasWrite && !txn.GetDeadline().IsZero() {
+		if hasWrite && txn.deadline != 0 {
 			cmd.dataOffset += 4 + int(_FIELD_HEADER_SIZE)
 			fieldCount++
 		}
@@ -648,7 +633,7 @@ func (cmd *baseCommand) sizeTxnBatch(txn *Txn, ver *uint64, hasWrite bool) {
 			cmd.dataOffset += int(7 + _FIELD_HEADER_SIZE)
 		}
 
-		if hasWrite && !txn.GetDeadline().IsZero() {
+		if hasWrite && txn.deadline != 0 {
 			cmd.dataOffset += int(4 + _FIELD_HEADER_SIZE)
 		}
 	}
@@ -662,8 +647,8 @@ func (cmd *baseCommand) writeTxn(txn *Txn, sendDeadline bool) {
 			cmd.writeFieldVersion(*cmd.version)
 		}
 
-		if sendDeadline && !txn.GetDeadline().IsZero() {
-			cmd.writeFieldLE32(int(txn.GetDeadline().Unix()), MRT_DEADLINE)
+		if sendDeadline && txn.deadline != 0 {
+			cmd.writeFieldLE32(txn.deadline, MRT_DEADLINE)
 		}
 	}
 }
@@ -675,7 +660,7 @@ func (cmd *baseCommand) writeTxn(txn *Txn, sendDeadline bool) {
 // Writes the command for write operations
 func (cmd *baseCommand) setWrite(policy *WritePolicy, operation OperationType, key *Key, bins []*Bin, binMap BinMap) Error {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, policy.SendKey)
+	fieldCount, err := cmd.estimateKeySize(policy.GetBasePolicy(), key, true)
 	if err != nil {
 		return err
 	}
@@ -715,7 +700,7 @@ func (cmd *baseCommand) setWrite(policy *WritePolicy, operation OperationType, k
 		cmd.writeHeaderWrite(policy, _INFO2_WRITE, fieldCount, len(binMap))
 	}
 
-	if err := cmd.writeKey(key, policy.SendKey); err != nil {
+	if err := cmd.writeKeyWithPolicy(&policy.BasePolicy, key, true); err != nil {
 		return err
 	}
 
@@ -746,9 +731,9 @@ func (cmd *baseCommand) setWrite(policy *WritePolicy, operation OperationType, k
 }
 
 // Writes the command for delete operations
-func (cmd *baseCommand) setDelete(policy *WritePolicy, key *Key) Error {
+func (cmd *baseCommand) setDelete(policy *WritePolicy, key *Key) (err Error) {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, false)
+	fieldCount, err := cmd.estimateKeySize(&policy.BasePolicy, key, true)
 	if err != nil {
 		return err
 	}
@@ -768,9 +753,10 @@ func (cmd *baseCommand) setDelete(policy *WritePolicy, key *Key) Error {
 		return err
 	}
 	cmd.writeHeaderWrite(policy, _INFO2_WRITE|_INFO2_DELETE, fieldCount, 0)
-	if err := cmd.writeKey(key, false); err != nil {
+	if err := cmd.writeKeyWithPolicy(&policy.BasePolicy, key, true); err != nil {
 		return err
 	}
+
 	if policy.FilterExpression != nil {
 		if err := cmd.writeFilterExpression(policy.FilterExpression, predSize); err != nil {
 			return err
@@ -786,7 +772,7 @@ func (cmd *baseCommand) setDelete(policy *WritePolicy, key *Key) Error {
 // Writes the command for touch operations
 func (cmd *baseCommand) setTouch(policy *WritePolicy, key *Key) Error {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, policy.SendKey)
+	fieldCount, err := cmd.estimateKeySize(&policy.BasePolicy, key, true)
 	if err != nil {
 		return err
 	}
@@ -807,7 +793,7 @@ func (cmd *baseCommand) setTouch(policy *WritePolicy, key *Key) Error {
 		return err
 	}
 	cmd.writeHeaderWrite(policy, _INFO2_WRITE, fieldCount, 1)
-	if err := cmd.writeKey(key, policy.SendKey); err != nil {
+	if err := cmd.writeKeyWithPolicy(&policy.BasePolicy, key, true); err != nil {
 		return err
 	}
 	if policy.FilterExpression != nil {
@@ -822,9 +808,9 @@ func (cmd *baseCommand) setTouch(policy *WritePolicy, key *Key) Error {
 }
 
 // Writes the command for exist operations
-func (cmd *baseCommand) setExists(policy *BasePolicy, key *Key) Error {
+func (cmd *baseCommand) setExists(policy *BasePolicy, key *Key) (err Error) {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, false)
+	fieldCount, err := cmd.estimateKeySize(policy, key, false)
 	if err != nil {
 		return err
 	}
@@ -844,7 +830,7 @@ func (cmd *baseCommand) setExists(policy *BasePolicy, key *Key) Error {
 		return err
 	}
 	cmd.writeHeaderReadHeader(policy, _INFO1_READ|_INFO1_NOBINDATA, fieldCount, 0)
-	if err := cmd.writeKey(key, false); err != nil {
+	if err := cmd.writeKeyWithPolicy(policy, key, false); err != nil {
 		return err
 	}
 	if policy.FilterExpression != nil {
@@ -858,9 +844,9 @@ func (cmd *baseCommand) setExists(policy *BasePolicy, key *Key) Error {
 }
 
 // Writes the command for get operations (all bins)
-func (cmd *baseCommand) setReadForKeyOnly(policy *BasePolicy, key *Key) Error {
+func (cmd *baseCommand) setReadForKeyOnly(policy *BasePolicy, key *Key) (err Error) {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, false)
+	fieldCount, err := cmd.estimateKeySize(policy, key, false)
 	if err != nil {
 		return err
 	}
@@ -879,7 +865,7 @@ func (cmd *baseCommand) setReadForKeyOnly(policy *BasePolicy, key *Key) Error {
 	}
 
 	cmd.writeHeaderRead(policy, _INFO1_READ|_INFO1_GET_ALL, 0, 0, fieldCount, 0)
-	if err := cmd.writeKey(key, false); err != nil {
+	if err := cmd.writeKeyWithPolicy(policy, key, false); err != nil {
 		return err
 	}
 	if policy.FilterExpression != nil {
@@ -895,10 +881,10 @@ func (cmd *baseCommand) setReadForKeyOnly(policy *BasePolicy, key *Key) Error {
 }
 
 // Writes the command for get operations (specified bins)
-func (cmd *baseCommand) setRead(policy *BasePolicy, key *Key, binNames []string) Error {
+func (cmd *baseCommand) setRead(policy *BasePolicy, key *Key, binNames []string) (err Error) {
 	if len(binNames) > 0 {
 		cmd.begin()
-		fieldCount, err := cmd.estimateKeySize(key, false)
+		fieldCount, err := cmd.estimateKeySize(policy, key, false)
 		if err != nil {
 			return err
 		}
@@ -927,7 +913,7 @@ func (cmd *baseCommand) setRead(policy *BasePolicy, key *Key, binNames []string)
 		}
 		cmd.writeHeaderRead(policy, attr, 0, 0, fieldCount, len(binNames))
 
-		if err := cmd.writeKey(key, false); err != nil {
+		if err := cmd.writeKeyWithPolicy(policy, key, false); err != nil {
 			return err
 		}
 
@@ -948,12 +934,9 @@ func (cmd *baseCommand) setRead(policy *BasePolicy, key *Key, binNames []string)
 }
 
 // Writes the command for getting metadata operations
-func (cmd *baseCommand) setReadHeader(policy *BasePolicy, key *Key) Error {
+func (cmd *baseCommand) setReadHeader(policy *BasePolicy, key *Key) (err Error) {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, false)
-	if err != nil {
-		return err
-	}
+	fieldCount := cmd.estimateRawKeySize(key)
 
 	predSize := 0
 	if policy.FilterExpression != nil {
@@ -971,7 +954,7 @@ func (cmd *baseCommand) setReadHeader(policy *BasePolicy, key *Key) Error {
 	}
 
 	cmd.writeHeaderReadHeader(policy, _INFO1_READ|_INFO1_NOBINDATA, fieldCount, 0)
-	if err := cmd.writeKey(key, false); err != nil {
+	if err := cmd.writeKeyWithPolicy(policy, key, false); err != nil {
 		return err
 	}
 	if policy.FilterExpression != nil {
@@ -1001,7 +984,7 @@ func (cmd *baseCommand) setOperate(policy *WritePolicy, key *Key, args *operateA
 		}
 	}
 
-	ksz, err := cmd.estimateKeySize(key, policy.SendKey && args.hasWrite)
+	ksz, err := cmd.estimateKeySize(&policy.BasePolicy, key, args.hasWrite)
 	if err != nil {
 		return err
 	}
@@ -1024,7 +1007,7 @@ func (cmd *baseCommand) setOperate(policy *WritePolicy, key *Key, args *operateA
 
 	cmd.writeHeaderReadWrite(policy, args, fieldCount)
 
-	if err := cmd.writeKey(key, policy.SendKey && args.hasWrite); err != nil {
+	if err := cmd.writeKeyWithPolicy(&policy.BasePolicy, key, args.hasWrite); err != nil {
 		return err
 	}
 
@@ -1048,7 +1031,7 @@ func (cmd *baseCommand) setOperate(policy *WritePolicy, key *Key, args *operateA
 
 func (cmd *baseCommand) setUdf(policy *WritePolicy, key *Key, packageName string, functionName string, args *ValueArray) Error {
 	cmd.begin()
-	fieldCount, err := cmd.estimateKeySize(key, policy.SendKey)
+	fieldCount, err := cmd.estimateKeySize(&policy.BasePolicy, key, true)
 	if err != nil {
 		return err
 	}
@@ -1075,7 +1058,7 @@ func (cmd *baseCommand) setUdf(policy *WritePolicy, key *Key, packageName string
 	}
 
 	cmd.writeHeaderWrite(policy, _INFO2_WRITE, fieldCount, 0)
-	if err := cmd.writeKey(key, policy.SendKey); err != nil {
+	if err := cmd.writeKeyWithPolicy(&policy.BasePolicy, key, true); err != nil {
 		return err
 	}
 	if policy.FilterExpression != nil {
@@ -1102,7 +1085,6 @@ func (cmd *baseCommand) setBatchOperateIfc(
 ) (*batchAttr, Error) {
 	offsets := newBatchOffsetsNative(batch)
 	return cmd.setBatchOperateIfcOffsets(client, policy, records, offsets)
-
 }
 
 func (cmd *baseCommand) setBatchOperateIfcOffsets(
@@ -1149,12 +1131,13 @@ func (cmd *baseCommand) setBatchOperateIfcOffsets(
 	for i := 0; i < max; i++ {
 		record := records[offsets.get(i)]
 		key := record.key()
-		cmd.dataOffset += len(key.digest) + 4
 
 		var ver *uint64
 		if len(versions) > 0 {
 			ver = versions[i]
 		}
+
+		cmd.dataOffset += len(key.digest) + 4
 
 		// Try reference equality in hope that namespace/set for all keys is set from fixed variables.
 		// if !policy.SendKey && prev != nil && prev.key().namespace == key.namespace && (prev.key().setName == key.setName) && record.equals(prev) {
@@ -1166,7 +1149,7 @@ func (cmd *baseCommand) setBatchOperateIfcOffsets(
 			cmd.dataOffset += 12 // header(4) + ttl(4) + fielCount(2) + opCount(2) = 12
 			cmd.dataOffset += len(key.namespace) + int(_FIELD_HEADER_SIZE)
 			cmd.dataOffset += len(key.setName) + int(_FIELD_HEADER_SIZE)
-
+			cmd.sizeTxnBatch(txn, ver, record.BatchRec().hasWrite)
 			if sz, err := record.size(&policy.BasePolicy); err != nil {
 				return nil, err
 			} else {
@@ -1207,14 +1190,15 @@ func (cmd *baseCommand) setBatchOperateIfcOffsets(
 		cmd.WriteUint32(uint32(index))
 
 		record := records[index]
-		key := record.key()
-		if _, err := cmd.Write(key.digest[:]); err != nil {
-			return nil, newCommonError(err)
-		}
 
 		var ver *uint64
 		if len(versions) > 0 {
 			ver = versions[i]
+		}
+
+		key := record.key()
+		if _, err := cmd.Write(key.digest[:]); err != nil {
+			return nil, newCommonError(err)
 		}
 
 		// Try reference equality in hope that namespace/set for all keys is set from fixed variables.
@@ -1354,7 +1338,7 @@ func (cmd *baseCommand) setBatchOperateOffsets(
 			cmd.dataOffset += len(key.setName) + int(_FIELD_HEADER_SIZE)
 			cmd.sizeTxnBatch(txn, ver, attr.hasWrite)
 
-			if attr.sendKey && key.userKey != nil && key.userKey != nullValue {
+			if attr.sendKey && key.hasValueToSend() {
 				if sz, err := key.userKey.EstimateSize(); err != nil {
 					return err
 				} else {
@@ -1538,7 +1522,7 @@ func (cmd *baseCommand) setBatchUDFOffsets(
 			cmd.dataOffset += len(key.setName) + int(_FIELD_HEADER_SIZE)
 			cmd.sizeTxnBatch(txn, ver, attr.hasWrite)
 
-			if attr.sendKey && key.userKey != nil && key.userKey != nullValue {
+			if attr.sendKey && key.hasValueToSend() {
 				if sz, err := key.userKey.EstimateSize(); err != nil {
 					return err
 				} else {
@@ -1693,7 +1677,7 @@ func (cmd *baseCommand) writeBatchRead(
 		cmd.WriteByte(byte(attr.infoAttr))
 		cmd.WriteByte(byte(attr.txnAttr))
 		cmd.WriteUint32(attr.expiration)
-		cmd.writeBatchFieldsTxnWithFilter(key, txn, ver, attr, filter, 0, opCount)
+		cmd.writeBatchFieldsTxn(key, txn, ver, attr, filter, 0, opCount)
 	} else {
 		cmd.WriteByte(_BATCH_MSG_INFO | _BATCH_MSG_TTL)
 		cmd.WriteByte(byte(attr.readAttr))
@@ -1719,9 +1703,9 @@ func (cmd *baseCommand) writeBatchWrite(
 		cmd.WriteByte(byte(attr.writeAttr))
 		cmd.WriteByte(byte(attr.infoAttr))
 		cmd.WriteByte(byte(attr.txnAttr))
-		cmd.WriteUint32(attr.generation)
+		cmd.WriteUint16(uint16(attr.generation)) // Note the reduced size of the gen field
 		cmd.WriteUint32(attr.expiration)
-		cmd.writeBatchFieldsTxnWithFilter(key, txn, ver, attr, filter, fieldCount, opCount)
+		cmd.writeBatchFieldsTxn(key, txn, ver, attr, filter, fieldCount, opCount)
 	} else {
 		cmd.WriteByte(_BATCH_MSG_INFO | _BATCH_MSG_GEN | _BATCH_MSG_TTL)
 		cmd.WriteByte(byte(attr.readAttr))
@@ -1731,14 +1715,6 @@ func (cmd *baseCommand) writeBatchWrite(
 		cmd.WriteUint32(attr.expiration)
 		cmd.writeBatchFieldsReg(key, attr, filter, fieldCount, opCount)
 	}
-
-	// if attr.sendKey && (key.userKey != nil && key.userKey != nullValue) {
-	// 	fieldCount++
-	// 	cmd.writeBatchFieldsWithFilter(key, filter, fieldCount, opCount)
-	// 	cmd.writeFieldValue(key.userKey, KEY)
-	// } else {
-	// 	cmd.writeBatchFieldsWithFilter(key, filter, fieldCount, opCount)
-	// }
 }
 
 func (cmd *baseCommand) getBatchFlags(policy *BatchPolicy) byte {
@@ -2029,7 +2005,7 @@ func (cmd *baseCommand) setBatchIndexRead(policy *BatchPolicy, records []*BatchR
 	return nil
 }
 
-func (cmd *baseCommand) writeBatchFieldsTxnWithFilter(
+func (cmd *baseCommand) writeBatchFieldsTxn(
 	key *Key,
 	txn *Txn,
 	ver *uint64,
@@ -2042,7 +2018,7 @@ func (cmd *baseCommand) writeBatchFieldsTxnWithFilter(
 		fieldCount++
 	}
 
-	if attr.hasWrite && !txn.GetDeadline().IsZero() {
+	if attr.hasWrite && txn.deadline != 0 {
 		fieldCount++
 	}
 
@@ -2050,27 +2026,32 @@ func (cmd *baseCommand) writeBatchFieldsTxnWithFilter(
 		fieldCount++
 	}
 
-	if attr.sendKey && key.userKey != nil && key.userKey != nullValue {
+	if attr.sendKey && key.hasValueToSend() {
 		fieldCount++
-	} else {
-		cmd.writeBatchFields(key, fieldCount, opCount)
-		cmd.writeFieldLE64(txn.Id(), MRT_ID)
-		if ver != nil {
-			cmd.writeFieldVersion(*ver)
-		}
-
-		if attr.hasWrite && !txn.GetDeadline().IsZero() {
-			cmd.writeFieldLE32(int(txn.GetDeadline().Unix()), MRT_DEADLINE)
-		}
-
-		if filter != nil {
-			filter.pack(cmd)
-		}
-
-		if attr.sendKey && key.userKey != nil && key.userKey != nullValue {
-			cmd.writeFieldValue(key.userKey, KEY)
-		}
 	}
+
+	if err := cmd.writeBatchFields(key, fieldCount, opCount); err != nil {
+		return err
+	}
+
+	cmd.writeFieldLE64(txn.Id(), MRT_ID)
+
+	if ver != nil {
+		cmd.writeFieldVersion(*ver)
+	}
+
+	if attr.hasWrite && txn.deadline != 0 {
+		cmd.writeFieldLE32(txn.deadline, MRT_DEADLINE)
+	}
+
+	if filter != nil {
+		filter.pack(cmd)
+	}
+
+	if attr.sendKey && key.hasValueToSend() {
+		cmd.writeFieldValue(key.userKey, KEY)
+	}
+
 	return nil
 }
 
@@ -2102,7 +2083,7 @@ func (cmd *baseCommand) writeBatchFieldsReg(
 		fieldCount++
 	}
 
-	if attr.sendKey && key.userKey != nil && key.userKey != nullValue {
+	if attr.sendKey && key.hasValueToSend() {
 		fieldCount++
 	}
 
@@ -2112,7 +2093,7 @@ func (cmd *baseCommand) writeBatchFieldsReg(
 		filter.pack(cmd)
 	}
 
-	if attr.sendKey && key.userKey != nil && key.userKey != nullValue {
+	if attr.sendKey && key.hasValueToSend() {
 		cmd.writeFieldValue(key.userKey, KEY)
 	}
 	return nil
@@ -2621,7 +2602,7 @@ func (cmd *baseCommand) setQuery(policy *QueryPolicy, wpolicy *WritePolicy, stat
 }
 
 func (cmd *baseCommand) estimateKeyAttrSize(policy Policy, key *Key, attr *batchAttr, filterExp *Expression) (int, Error) {
-	fieldCount, err := cmd.estimateKeySizeWithPolicy(policy, key, attr.hasWrite)
+	fieldCount, err := cmd.estimateKeySize(policy.GetBasePolicy(), key, attr.hasWrite)
 	if err != nil {
 		return -1, err
 	}
@@ -2637,18 +2618,25 @@ func (cmd *baseCommand) estimateKeyAttrSize(policy Policy, key *Key, attr *batch
 	return fieldCount, nil
 }
 
-// TODO: Split in two; with policy and simple and check with the Java client
-func (cmd *baseCommand) estimateKeySizeWithPolicy(policy Policy, key *Key, hasWrite bool) (int, Error) {
-	fieldCount, err := cmd.estimateKeySize(key, policy.GetBasePolicy().SendKey)
-	if err != nil {
-		return -1, err
+func (cmd *baseCommand) estimateKeySize(policy *BasePolicy, key *Key, hasWrite bool) (int, Error) {
+	fieldCount := cmd.estimateRawKeySize(key)
+
+	fieldCount += cmd.sizeTxn(key, policy.Txn, hasWrite)
+
+	if policy.SendKey && key.hasValueToSend() {
+		// field header size + key size
+		sz, err := key.userKey.EstimateSize()
+		if err != nil {
+			return sz, err
+		}
+		cmd.dataOffset += sz + int(_FIELD_HEADER_SIZE) + 1
+		fieldCount++
 	}
 
-	fieldCount += cmd.sizeTxn(key, policy.GetBasePolicy().Txn, hasWrite)
 	return fieldCount, nil
 }
 
-func (cmd *baseCommand) estimateKeySize(key *Key, sendKey bool) (int, Error) {
+func (cmd *baseCommand) estimateRawKeySize(key *Key) int {
 	fieldCount := 0
 
 	if key.namespace != "" {
@@ -2664,17 +2652,7 @@ func (cmd *baseCommand) estimateKeySize(key *Key, sendKey bool) (int, Error) {
 	cmd.dataOffset += int(len(key.digest) + int(_FIELD_HEADER_SIZE))
 	fieldCount++
 
-	if sendKey && (key.userKey != nil && key.userKey != nullValue) {
-		// field header size + key size
-		sz, err := key.userKey.EstimateSize()
-		if err != nil {
-			return sz, err
-		}
-		cmd.dataOffset += sz + int(_FIELD_HEADER_SIZE) + 1
-		fieldCount++
-	}
-
-	return fieldCount, nil
+	return fieldCount
 }
 
 func (cmd *baseCommand) estimateUdfSize(packageName string, functionName string, args *ValueArray) (int, Error) {
@@ -2990,15 +2968,22 @@ func (cmd *baseCommand) writeKeyAttr(
 
 // TODO: Check this with the java client, including the references
 func (cmd *baseCommand) writeKeyWithPolicy(policy *BasePolicy, key *Key, sendDeadline bool) Error {
-	if err := cmd.writeKey(key, policy.SendKey); err != nil {
+	if err := cmd.writeKey(key); err != nil {
 		return err
 	}
 
 	cmd.writeTxn(policy.Txn, sendDeadline)
+
+	if policy.SendKey && key.hasValueToSend() {
+		if err := cmd.writeFieldValue(key.userKey, KEY); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func (cmd *baseCommand) writeKey(key *Key, sendKey bool) Error {
+func (cmd *baseCommand) writeKey(key *Key) Error {
 	// Write key into buffer.
 	if key.namespace != "" {
 		cmd.writeFieldString(key.namespace, NAMESPACE)
@@ -3009,13 +2994,6 @@ func (cmd *baseCommand) writeKey(key *Key, sendKey bool) Error {
 	}
 
 	cmd.writeFieldBytes(key.digest[:], DIGEST_RIPE)
-
-	if sendKey && (key.userKey != nil && key.userKey != nullValue) {
-		if err := cmd.writeFieldValue(key.userKey, KEY); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -3162,7 +3140,7 @@ func (cmd *baseCommand) writeFieldLE32(val int, typ FieldType) {
 }
 
 func (cmd *baseCommand) writeFieldLE64(val int64, typ FieldType) {
-	cmd.writeFieldHeader(4, typ)
+	cmd.writeFieldHeader(8, typ)
 	cmd.WriteInt64LittleEndian(uint64(val))
 }
 
@@ -3775,22 +3753,4 @@ func (cmd *baseCommand) parseVersion(fieldCount int) *uint64 {
 		cmd.dataOffset += int(size)
 	}
 	return version
-}
-
-func (cmd *baseCommand) parseTranDeadline(fieldCount int) (err Error) {
-	for i := 0; i < fieldCount; i++ {
-		len := Buffer.BytesToInt32(cmd.dataBuffer, cmd.dataOffset)
-		cmd.dataOffset += 4
-
-		typ := cmd.dataBuffer[cmd.dataOffset]
-		cmd.dataOffset++
-		size := len - 1
-
-		if FieldType(typ) == MRT_DEADLINE {
-			deadline := Buffer.LittleBytesToInt32(cmd.dataBuffer, cmd.dataOffset)
-			cmd.txn.SetDeadline(time.Now().Add(time.Duration(deadline)))
-		}
-		cmd.dataOffset += int(size)
-	}
-	return nil
 }

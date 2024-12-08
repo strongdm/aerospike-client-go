@@ -15,9 +15,6 @@
 package aerospike
 
 import (
-	"fmt"
-
-	"github.com/aerospike/aerospike-client-go/v7/types"
 	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
 )
 
@@ -62,57 +59,5 @@ func (cmd *singleCommand) emptySocket(conn *Connection) Error {
 			return err
 		}
 	}
-	return nil
-}
-
-func (cmd *singleCommand) skipFields(fieldCount int) (err Error) {
-	// There can be fields in the response (setname etc).
-	// But for now, ignore them. Expose them to the API if needed in the future.
-	for i := 0; i < fieldCount; i++ {
-		fieldLen := Buffer.BytesToUint32(cmd.dataBuffer, cmd.dataOffset)
-		cmd.dataOffset += 4 + int(fieldLen)
-	}
-	return nil
-}
-
-func (cmd *singleCommand) parseFields(
-	txn *Txn,
-	resultCode types.ResultCode,
-	fieldCount int,
-	key *Key,
-	hasWrite bool,
-) Error {
-	if txn == nil {
-		if err := cmd.skipFields(fieldCount); err != nil {
-			return err
-		}
-	}
-
-	var version *uint64
-
-	for i := 0; i < fieldCount; i++ {
-		len := Buffer.BytesToInt32(cmd.dataBuffer, cmd.dataOffset)
-		cmd.dataOffset += 4
-
-		typ := cmd.dataBuffer[cmd.dataOffset]
-		cmd.dataOffset++
-		size := len - 1
-
-		if FieldType(typ) == RECORD_VERSION {
-			if size == 7 {
-				version = Buffer.VersionBytesToUint64(cmd.dataBuffer, cmd.dataOffset)
-			} else {
-				return newError(types.PARSE_ERROR, fmt.Sprintf("Record version field has invalid size: %v", size))
-			}
-		}
-		cmd.dataOffset += int(size)
-	}
-
-	if hasWrite {
-		txn.OnWrite(key, version, resultCode)
-	} else {
-		txn.OnRead(key, version)
-	}
-
 	return nil
 }

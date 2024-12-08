@@ -175,6 +175,20 @@ func (cmd *batchTxnRollCommand) parseRecord(key *Key, opCount int, generation, e
 	return newRecord(cmd.node, key, bins, generation, expiration), nil
 }
 
+func (cmd *batchTxnRollCommand) inDoubt() {
+	if !cmd.attr.hasWrite {
+		return
+	}
+
+	for index := range cmd.batch.offsets {
+		record := cmd.records[index]
+
+		if record.ResultCode == types.NO_RESPONSE {
+			record.InDoubt = true
+		}
+	}
+}
+
 func (cmd *batchTxnRollCommand) commandType() commandType {
 	return ttBatchWrite
 }

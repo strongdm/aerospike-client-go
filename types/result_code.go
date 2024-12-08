@@ -175,24 +175,8 @@ const (
 	// LOST_CONFLICT defines write command loses conflict to XDR.
 	LOST_CONFLICT ResultCode = 28
 
-	// MRT record blocked by a different transaction.
-	MRT_BLOCKED ResultCode = 29
-
-	// MRT read version mismatch identified during commit.
-	// Some other command changed the record outside of the transaction.
-	MRT_VERSION_MISMATCH ResultCode = 30
-
-	// MRT deadline reached without a successful commit or abort.
-	MRT_EXPIRED ResultCode = 31
-
 	// Write can't complete until XDR finishes shipping.
 	XDR_KEY_BUSY ResultCode = 32
-
-	// MRT was already committed.
-	MRT_COMMITTED ResultCode = 33
-
-	// MRT was already aborted.
-	MRT_ABORTED ResultCode = 34
 
 	// QUERY_END defines there are no more records left for query.
 	QUERY_END ResultCode = 50
@@ -246,13 +230,13 @@ const (
 	INVALID_PRIVILEGE ResultCode = 72
 
 	// INVALID_WHITELIST defines invalid IP address whitelist.
-	INVALID_WHITELIST = 73
+	INVALID_WHITELIST ResultCode = 73
 
 	// QUOTAS_NOT_ENABLED defines Quotas not enabled on server.
-	QUOTAS_NOT_ENABLED = 74
+	QUOTAS_NOT_ENABLED ResultCode = 74
 
 	// INVALID_QUOTA defines invalid quota value.
-	INVALID_QUOTA = 75
+	INVALID_QUOTA ResultCode = 75
 
 	// NOT_AUTHENTICATED defines user must be authentication before performing database operations.
 	NOT_AUTHENTICATED ResultCode = 80
@@ -261,13 +245,32 @@ const (
 	ROLE_VIOLATION ResultCode = 81
 
 	// NOT_WHITELISTED defines command not allowed because sender IP address not whitelisted.
-	NOT_WHITELISTED = 82
+	NOT_WHITELISTED ResultCode = 82
 
 	// QUOTA_EXCEEDED defines Quota exceeded.
-	QUOTA_EXCEEDED = 83
+	QUOTA_EXCEEDED ResultCode = 83
 
 	// UDF_BAD_RESPONSE defines a user defined function returned an error code.
 	UDF_BAD_RESPONSE ResultCode = 100
+
+	// MRT record blocked by a different transaction.
+	MRT_BLOCKED ResultCode = 120
+
+	// MRT read version mismatch identified during commit.
+	// Some other command changed the record outside of the transaction.
+	MRT_VERSION_MISMATCH ResultCode = 121
+
+	// MRT deadline reached without a successful commit or abort.
+	MRT_EXPIRED ResultCode = 122
+
+	// MRT write command limit (4096) exceeded.
+	MRT_TOO_MANY_WRITES ResultCode = 123
+
+	// MRT was already committed.
+	MRT_COMMITTED ResultCode = 124
+
+	// MRT was already aborted.
+	MRT_ABORTED ResultCode = 125
 
 	// BATCH_DISABLED defines batch functionality has been disabled.
 	BATCH_DISABLED ResultCode = 150
@@ -479,23 +482,8 @@ func ResultCodeToString(resultCode ResultCode) string {
 	case LOST_CONFLICT:
 		return "Write command loses conflict to XDR."
 
-	case MRT_BLOCKED:
-		return "MRT record blocked by a different transaction"
-
-	case MRT_VERSION_MISMATCH:
-		return "MRT read version mismatch identified during commit. Some other command changed the record outside of the transaction"
-
-	case MRT_EXPIRED:
-		return "MRT deadline reached without a successful commit or abort"
-
 	case XDR_KEY_BUSY:
 		return "Write can't complete until XDR finishes shipping."
-
-	case MRT_COMMITTED:
-		return "MRT was already committed"
-
-	case MRT_ABORTED:
-		return "MRT was already aborted"
 
 	case QUERY_END:
 		return "Query end"
@@ -571,6 +559,24 @@ func ResultCodeToString(resultCode ResultCode) string {
 
 	case UDF_BAD_RESPONSE:
 		return "UDF returned error"
+
+	case MRT_BLOCKED:
+		return "MRT record blocked by a different transaction"
+
+	case MRT_VERSION_MISMATCH:
+		return "MRT read version mismatch identified during commit. Some other command changed the record outside of the transaction"
+
+	case MRT_EXPIRED:
+		return "MRT deadline reached without a successful commit or abort"
+
+	case MRT_TOO_MANY_WRITES:
+		return "MRT write command limit (4096) exceeded"
+
+	case MRT_COMMITTED:
+		return "MRT was already committed"
+
+	case MRT_ABORTED:
+		return "MRT was already aborted"
 
 	case BATCH_DISABLED:
 		return "Batch functionality has been disabled"
@@ -736,18 +742,8 @@ func (rc ResultCode) String() string {
 		return "FILTERED_OUT"
 	case LOST_CONFLICT:
 		return "LOST_CONFLICT"
-	case MRT_BLOCKED:
-		return "MRT_BLOCKED"
-	case MRT_VERSION_MISMATCH:
-		return "MRT_VERSION_MISMATCH"
-	case MRT_EXPIRED:
-		return "MRT_EXPIRED"
 	case XDR_KEY_BUSY:
 		return "XDR_KEY_BUSY"
-	case MRT_COMMITTED:
-		return "MRT_COMMITTED"
-	case MRT_ABORTED:
-		return "MRT_ABORTED"
 	case QUERY_END:
 		return "QUERY_END"
 	case SECURITY_NOT_SUPPORTED:
@@ -798,6 +794,18 @@ func (rc ResultCode) String() string {
 		return "QUOTA_EXCEEDED"
 	case UDF_BAD_RESPONSE:
 		return "UDF_BAD_RESPONSE"
+	case MRT_BLOCKED:
+		return "MRT_BLOCKED"
+	case MRT_VERSION_MISMATCH:
+		return "MRT_VERSION_MISMATCH"
+	case MRT_EXPIRED:
+		return "MRT_EXPIRED"
+	case MRT_TOO_MANY_WRITES:
+		return "MRT_TOO_MANY_WRITES"
+	case MRT_COMMITTED:
+		return "MRT_COMMITTED"
+	case MRT_ABORTED:
+		return "MRT_ABORTED"
 	case BATCH_DISABLED:
 		return "BATCH_DISABLED"
 	case BATCH_MAX_REQUESTS_EXCEEDED:

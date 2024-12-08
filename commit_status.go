@@ -19,6 +19,7 @@ type CommitStatus string
 
 const (
 	CommitStatusOK                   CommitStatus = "Commit succeeded"
+	CommitStatusUnverified           CommitStatus = "Commit process was disrupted on client side and unverified"
 	CommitStatusAlreadyCommitted     CommitStatus = "Already committed"
 	CommitStatusAlreadyAborted       CommitStatus = "Already aborted"
 	CommitStatusRollForwardAbandoned CommitStatus = "MRT client roll forward abandoned. Server will eventually commit the MRT."

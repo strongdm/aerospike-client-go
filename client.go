@@ -313,7 +313,9 @@ func (clnt *Client) Put(policy *WritePolicy, key *Key, binMap BinMap) Error {
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
 	}
 
 	command, err := newWriteCommand(clnt.cluster, policy, key, nil, binMap, _WRITE)
@@ -333,7 +335,9 @@ func (clnt *Client) PutBins(policy *WritePolicy, key *Key, bins ...*Bin) Error {
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
 	}
 
 	command, err := newWriteCommand(clnt.cluster, policy, key, bins, nil, _WRITE)
@@ -357,7 +361,9 @@ func (clnt *Client) Append(policy *WritePolicy, key *Key, binMap BinMap) Error {
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
 	}
 
 	command, err := newWriteCommand(clnt.cluster, policy, key, nil, binMap, _APPEND)
@@ -373,7 +379,9 @@ func (clnt *Client) AppendBins(policy *WritePolicy, key *Key, bins ...*Bin) Erro
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
 	}
 
 	command, err := newWriteCommand(clnt.cluster, policy, key, bins, nil, _APPEND)
@@ -393,7 +401,9 @@ func (clnt *Client) Prepend(policy *WritePolicy, key *Key, binMap BinMap) Error 
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
 	}
 
 	command, err := newWriteCommand(clnt.cluster, policy, key, nil, binMap, _PREPEND)
@@ -409,7 +419,9 @@ func (clnt *Client) PrependBins(policy *WritePolicy, key *Key, bins ...*Bin) Err
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
 	}
 
 	command, err := newWriteCommand(clnt.cluster, policy, key, bins, nil, _PREPEND)
@@ -433,7 +445,9 @@ func (clnt *Client) Add(policy *WritePolicy, key *Key, binMap BinMap) Error {
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
 	}
 
 	command, err := newWriteCommand(clnt.cluster, policy, key, nil, binMap, _ADD)
@@ -449,7 +463,9 @@ func (clnt *Client) AddBins(policy *WritePolicy, key *Key, bins ...*Bin) Error {
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
 	}
 
 	command, err := newWriteCommand(clnt.cluster, policy, key, bins, nil, _ADD)
@@ -471,7 +487,9 @@ func (clnt *Client) Delete(policy *WritePolicy, key *Key) (bool, Error) {
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return false, err
+		}
 	}
 
 	command, err := newDeleteCommand(clnt.cluster, policy, key)
@@ -490,12 +508,15 @@ func (clnt *Client) Delete(policy *WritePolicy, key *Key) (bool, Error) {
 // Touch updates a record's metadata.
 // If the record exists, the record's TTL will be reset to the
 // policy's expiration.
+// If the record does not exist, it can't be created because the server deletes empty records.
 // If the record doesn't exist, it will return an error.
 func (clnt *Client) Touch(policy *WritePolicy, key *Key) Error {
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
 	}
 
 	command, err := newTouchCommand(clnt.cluster, policy, key)
@@ -517,7 +538,9 @@ func (clnt *Client) Exists(policy *BasePolicy, key *Key) (bool, Error) {
 	policy = clnt.getUsablePolicy(policy)
 
 	if policy.Txn != nil {
-		policy.Txn.prepareRead(key.namespace)
+		if err := policy.Txn.prepareRead(key.namespace); err != nil {
+			return false, err
+		}
 	}
 
 	command, err := newExistsCommand(clnt.cluster, policy, key)
@@ -537,7 +560,9 @@ func (clnt *Client) BatchExists(policy *BatchPolicy, keys []*Key) ([]bool, Error
 	policy = clnt.getUsableBatchPolicy(policy)
 
 	if policy.Txn != nil {
-		policy.Txn.prepareReadForKeys(keys)
+		if err := policy.Txn.prepareReadForKeys(keys); err != nil {
+			return nil, err
+		}
 	}
 
 	// same array can be used without synchronization;
@@ -574,10 +599,12 @@ func (clnt *Client) Get(policy *BasePolicy, key *Key, binNames ...string) (*Reco
 	policy = clnt.getUsablePolicy(policy)
 
 	if policy.Txn != nil {
-		policy.Txn.prepareRead(key.namespace)
+		if err := policy.Txn.prepareRead(key.namespace); err != nil {
+			return nil, err
+		}
 	}
 
-	command, err := newReadCommand(clnt.cluster, policy, key, binNames, nil)
+	command, err := newReadCommand(clnt.cluster, policy, key, binNames)
 	if err != nil {
 		return nil, err
 	}
@@ -596,7 +623,9 @@ func (clnt *Client) GetHeader(policy *BasePolicy, key *Key) (*Record, Error) {
 	policy = clnt.getUsablePolicy(policy)
 
 	if policy.Txn != nil {
-		policy.Txn.prepareRead(key.namespace)
+		if err := policy.Txn.prepareRead(key.namespace); err != nil {
+			return nil, err
+		}
 	}
 
 	command, err := newReadHeaderCommand(clnt.cluster, policy, key)
@@ -623,7 +652,9 @@ func (clnt *Client) BatchGet(policy *BatchPolicy, keys []*Key, binNames ...strin
 	policy = clnt.getUsableBatchPolicy(policy)
 
 	if policy.Txn != nil {
-		policy.Txn.prepareReadForKeys(keys)
+		if err := policy.Txn.prepareReadForKeys(keys); err != nil {
+			return nil, err
+		}
 	}
 
 	// same array can be used without synchronization;
@@ -635,7 +666,12 @@ func (clnt *Client) BatchGet(policy *BatchPolicy, keys []*Key, binNames ...strin
 		return nil, err
 	}
 
-	cmd := newBatchCommandGet(clnt, nil, policy, keys, binNames, nil, records, _INFO1_READ, false)
+	rattr := _INFO1_READ
+	if len(binNames) == 0 {
+		rattr = rattr | _INFO1_GET_ALL
+	}
+
+	cmd := newBatchCommandGet(clnt, nil, policy, keys, binNames, nil, records, rattr, false)
 	filteredOut, err := clnt.batchExecute(policy, batchNodes, cmd)
 	if err != nil && !policy.AllowPartialResults {
 		return nil, err
@@ -657,7 +693,9 @@ func (clnt *Client) BatchGetOperate(policy *BatchPolicy, keys []*Key, ops ...*Op
 	policy = clnt.getUsableBatchPolicy(policy)
 
 	if policy.Txn != nil {
-		policy.Txn.prepareReadForKeys(keys)
+		if err := policy.Txn.prepareReadForKeys(keys); err != nil {
+			return nil, err
+		}
 	}
 
 	// same array can be used without synchronization;
@@ -692,7 +730,9 @@ func (clnt *Client) BatchGetComplex(policy *BatchPolicy, records []*BatchRead) E
 	policy = clnt.getUsableBatchPolicy(policy)
 
 	if policy.Txn != nil {
-		policy.Txn.prepareBatchReads(records)
+		if err := policy.Txn.prepareBatchReads(records); err != nil {
+			return err
+		}
 	}
 
 	cmd := newBatchIndexCommandGet(clnt, nil, policy, records, true)
@@ -702,7 +742,7 @@ func (clnt *Client) BatchGetComplex(policy *BatchPolicy, records []*BatchRead) E
 		return err
 	}
 
-	filteredOut, err := clnt.batchExecute(policy, batchNodes, cmd)
+	filteredOut, err := clnt.batchExecute(policy, batchNodes, &cmd)
 	if err != nil && !policy.AllowPartialResults {
 		return err
 	}
@@ -723,7 +763,9 @@ func (clnt *Client) BatchGetHeader(policy *BatchPolicy, keys []*Key) ([]*Record,
 	policy = clnt.getUsableBatchPolicy(policy)
 
 	if policy.Txn != nil {
-		policy.Txn.prepareReadForKeys(keys)
+		if err := policy.Txn.prepareReadForKeys(keys); err != nil {
+			return nil, err
+		}
 	}
 
 	// same array can be used without synchronization;
@@ -757,7 +799,9 @@ func (clnt *Client) BatchDelete(policy *BatchPolicy, deletePolicy *BatchDeletePo
 	deletePolicy = clnt.getUsableBatchDeletePolicy(deletePolicy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKeys(clnt.cluster, policy, keys)
+		if err := txnMonitor.addKeys(clnt.cluster, policy, keys); err != nil {
+			return nil, err
+		}
 	}
 
 	attr := &batchAttr{}
@@ -791,7 +835,9 @@ func (clnt *Client) BatchOperate(policy *BatchPolicy, records []BatchRecordIfc) 
 	policy = clnt.getUsableBatchPolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKeysFromRecords(clnt.cluster, policy, records)
+		if err := txnMonitor.addKeysFromRecords(clnt.cluster, policy, records); err != nil {
+			return err
+		}
 	}
 
 	batchNodes, err := newBatchOperateNodeListIfc(clnt.cluster, policy, records)
@@ -800,7 +846,7 @@ func (clnt *Client) BatchOperate(policy *BatchPolicy, records []BatchRecordIfc) 
 	}
 
 	cmd := newBatchCommandOperate(clnt, nil, policy, records)
-	_, err = clnt.batchExecute(policy, batchNodes, cmd)
+	_, err = clnt.batchExecute(policy, batchNodes, &cmd)
 	return err
 }
 
@@ -816,7 +862,9 @@ func (clnt *Client) BatchExecute(policy *BatchPolicy, udfPolicy *BatchUDFPolicy,
 	udfPolicy = clnt.getUsableBatchUDFPolicy(udfPolicy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKeys(clnt.cluster, policy, keys)
+		if err := txnMonitor.addKeys(clnt.cluster, policy, keys); err != nil {
+			return nil, err
+		}
 	}
 
 	attr := &batchAttr{}
@@ -865,23 +913,37 @@ func (clnt *Client) operate(policy *WritePolicy, key *Key, useOpResults bool, op
 
 	if args.hasWrite {
 		if policy.Txn != nil {
-			txnMonitor.addKey(clnt.cluster, policy, key)
+			if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+				return nil, err
+			}
 		}
+
+		command, err := newOperateCommandWrite(clnt.cluster, key, args, useOpResults)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := command.Execute(); err != nil {
+			return nil, err
+		}
+		return command.GetRecord(), nil
 	} else {
 		if policy.Txn != nil {
-			policy.Txn.prepareRead(key.namespace)
+			if err := policy.Txn.prepareRead(key.namespace); err != nil {
+				return nil, err
+			}
 		}
-	}
 
-	command, err := newOperateCommand(clnt.cluster, policy, key, args, useOpResults)
-	if err != nil {
-		return nil, err
-	}
+		command, err := newOperateCommandRead(clnt.cluster, key, args, useOpResults)
+		if err != nil {
+			return nil, err
+		}
 
-	if err := command.Execute(); err != nil {
-		return nil, err
+		if err := command.Execute(); err != nil {
+			return nil, err
+		}
+		return command.GetRecord(), nil
 	}
-	return command.GetRecord(), nil
 }
 
 //-------------------------------------------------------
@@ -1132,7 +1194,9 @@ func (clnt *Client) execute(policy *WritePolicy, key *Key, packageName string, f
 	policy = clnt.getUsableWritePolicy(policy)
 
 	if policy.Txn != nil {
-		txnMonitor.addKey(clnt.cluster, policy, key)
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return nil, err
+		}
 	}
 
 	command, err := newExecuteCommand(clnt.cluster, policy, key, packageName, functionName, NewValueArray(args))
@@ -1393,7 +1457,9 @@ func (clnt *Client) Commit(txn *Txn) (CommitStatus, Error) {
 	default:
 		fallthrough
 	case TxnStateOpen:
-		tr.Verify(&clnt.GetDefaultTxnVerifyPolicy().BatchPolicy, &clnt.GetDefaultTxnRollPolicy().BatchPolicy)
+		if err := tr.Verify(&clnt.GetDefaultTxnVerifyPolicy().BatchPolicy, &clnt.GetDefaultTxnRollPolicy().BatchPolicy); err != nil {
+			return CommitStatusUnverified, err
+		}
 		return tr.Commit(&clnt.GetDefaultTxnRollPolicy().BatchPolicy)
 	case TxnStateVerified:
 		return tr.Commit(&clnt.GetDefaultTxnRollPolicy().BatchPolicy)

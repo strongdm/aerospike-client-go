@@ -16,81 +16,52 @@ package aerospike
 
 import (
 	"github.com/aerospike/aerospike-client-go/v7/types"
-
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
 )
 
 type readHeaderCommand struct {
-	singleCommand
-
-	policy *BasePolicy
-	record *Record
+	baseReadCommand
 }
 
 func newReadHeaderCommand(cluster *Cluster, policy *BasePolicy, key *Key) (readHeaderCommand, Error) {
-	var err Error
-	var partition *Partition
-	if cluster != nil {
-		partition, err = PartitionForRead(cluster, policy, key)
-		if err != nil {
-			return readHeaderCommand{}, err
-		}
+	brc, err := newBaseReadCommand(cluster, policy, key)
+	if err != nil {
+		return readHeaderCommand{}, err
 	}
 
 	newReadHeaderCmd := readHeaderCommand{
-		singleCommand: newSingleCommand(cluster, key, partition),
-		policy:        policy,
+		baseReadCommand: brc,
 	}
 
 	return newReadHeaderCmd, nil
-}
-
-func (cmd *readHeaderCommand) getPolicy(ifc command) Policy {
-	return cmd.policy
 }
 
 func (cmd *readHeaderCommand) writeBuffer(ifc command) Error {
 	return cmd.setReadHeader(cmd.policy, cmd.key)
 }
 
-func (cmd *readHeaderCommand) getNode(ifc command) (*Node, Error) {
-	return cmd.partition.GetNodeRead(cmd.cluster)
-}
-
-func (cmd *readHeaderCommand) prepareRetry(ifc command, isTimeout bool) bool {
-	cmd.partition.PrepareRetryRead(isTimeout)
-	return true
-}
-
 func (cmd *readHeaderCommand) parseResult(ifc command, conn *Connection) Error {
-	// Read header.
-	if _, err := conn.Read(cmd.dataBuffer, int(_MSG_TOTAL_HEADER_SIZE)); err != nil {
+	rp, err := newRecordParser(&cmd.baseCommand)
+	if err != nil {
 		return err
 	}
 
-	header := Buffer.BytesToInt64(cmd.dataBuffer, 0)
-
-	// Validate header to make sure we are at the beginning of a message
-	if err := cmd.validateHeader(header); err != nil {
+	if err := rp.parseFields(cmd.policy.Txn, cmd.key, false); err != nil {
 		return err
 	}
 
-	resultCode := cmd.dataBuffer[13] & 0xFF
-
-	if resultCode == 0 {
-		generation := Buffer.BytesToUint32(cmd.dataBuffer, 14)
-		expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 18))
-		cmd.record = newRecord(cmd.node, cmd.key, nil, generation, expiration)
+	if rp.resultCode == 0 {
+		cmd.record = newRecord(cmd.node, cmd.key, nil, rp.generation, rp.expiration)
 	} else {
-		if types.ResultCode(resultCode) == types.KEY_NOT_FOUND_ERROR {
+		switch rp.resultCode {
+		case types.KEY_NOT_FOUND_ERROR:
 			cmd.record = nil
-		} else if types.ResultCode(resultCode) == types.FILTERED_OUT {
+		case types.FILTERED_OUT:
 			return ErrFilteredOut.err()
-		} else {
-			return newError(types.ResultCode(resultCode))
+		default:
+			return newError(rp.resultCode)
 		}
 	}
-	return cmd.emptySocket(conn)
+	return nil
 }
 
 func (cmd *readHeaderCommand) GetRecord() *Record {

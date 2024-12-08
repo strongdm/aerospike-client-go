@@ -15,12 +15,7 @@
 package aerospike
 
 import (
-	"fmt"
-
-	"github.com/aerospike/aerospike-client-go/v7/logger"
 	"github.com/aerospike/aerospike-client-go/v7/types"
-
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
 )
 
 // guarantee batchSingleTxnRollCommand implements command interface
@@ -88,70 +83,17 @@ func (cmd *batchSingleTxnRollCommand) prepareRetry(ifc command, isTimeout bool) 
 }
 
 func (cmd *batchSingleTxnRollCommand) parseResult(ifc command, conn *Connection) Error {
-	// Read proto and check if compressed
-	if _, err := conn.Read(cmd.dataBuffer, 8); err != nil {
-		logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
+	rp, err := newRecordParser(&cmd.baseCommand)
+	if err != nil {
 		return err
 	}
 
-	if compressedSize := cmd.compressedSize(); compressedSize > 0 {
-		// Read compressed size
-		if _, err := conn.Read(cmd.dataBuffer, 8); err != nil {
-			logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
-			return err
-		}
-
-		if err := cmd.conn.initInflater(true, compressedSize); err != nil {
-			return newError(types.PARSE_ERROR, fmt.Sprintf("Error setting up zlib inflater for size `%d`: %s", compressedSize, err.Error()))
-		}
-
-		// Read header.
-		if _, err := conn.Read(cmd.dataBuffer, int(_MSG_TOTAL_HEADER_SIZE)); err != nil {
-			logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
-			return err
-		}
-	} else {
-		// Read header.
-		if _, err := conn.Read(cmd.dataBuffer[8:], int(_MSG_TOTAL_HEADER_SIZE)-8); err != nil {
-			logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
-			return err
-		}
-	}
-
-	// A number of these are commented out because we just don't care enough to read
-	// that section of the header. If we do care, uncomment and check!
-	sz := Buffer.BytesToInt64(cmd.dataBuffer, 0)
-
-	// Validate header to make sure we are at the beginning of a message
-	if err := cmd.validateHeader(sz); err != nil {
-		return err
-	}
-
-	headerLength := int(cmd.dataBuffer[8])
-	resultCode := types.ResultCode(cmd.dataBuffer[13] & 0xFF)
-	// generation := Buffer.BytesToUint32(cmd.dataBuffer, 14)
-	// expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 18))
-	// fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 26)) // almost certainly 0
-	// opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 28))
-	receiveSize := int((sz & 0xFFFFFFFFFFFF) - int64(headerLength))
-
-	// Read remaining message bytes.
-	if receiveSize > 0 {
-		if err := cmd.sizeBufferSz(receiveSize, false); err != nil {
-			return err
-		}
-		if _, err := conn.Read(cmd.dataBuffer, receiveSize); err != nil {
-			logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
-			return err
-		}
-
-	}
-
-	if resultCode == 0 {
+	if rp.resultCode == 0 {
 		cmd.record.ResultCode = types.OK
 	} else {
-		err := newError(resultCode)
+		err := newError(rp.resultCode)
 		err.setInDoubt(cmd.isRead(), cmd.commandSentCounter)
+		return err
 	}
 
 	return nil

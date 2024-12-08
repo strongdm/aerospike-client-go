@@ -18,7 +18,7 @@ package aerospike
 type AbortStatus string
 
 const (
-	AbortStatusOk                AbortStatus = "Abort succeeded"
+	AbortStatusOK                AbortStatus = "Abort succeeded"
 	AbortStatusAlreadyCommitted  AbortStatus = "Already committed"
 	AbortStatusAlreadyAborted    AbortStatus = "Already aborted"
 	AbortStatusRollBackAbandoned AbortStatus = "MRT client roll back abandoned. Server will eventually abort the MRT."

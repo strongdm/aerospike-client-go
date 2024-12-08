@@ -14,8 +14,6 @@
 
 package aerospike
 
-import "time"
-
 type TxnMonitor struct{}
 
 var txnMonitor = new(TxnMonitor)
@@ -28,29 +26,30 @@ var txnOrderedListPolicy = &ListPolicy{
 const binNameId = "id"
 const binNameDigests = "keyds"
 
-func (tm *TxnMonitor) addKey(cluster *Cluster, policy *WritePolicy, cmdKey *Key) {
+func (tm *TxnMonitor) addKey(cluster *Cluster, policy *WritePolicy, cmdKey *Key) Error {
 	txn := policy.Txn
 
 	if txn.WriteExistsForKey(cmdKey) {
 		// Transaction monitor already contains this key.
-		return
+		return nil
 	}
 
 	ops := tm.getTranOps(txn, cmdKey)
-	tm.addWriteKeys(cluster, policy.GetBasePolicy(), ops)
+	return tm.addWriteKeys(cluster, policy.GetBasePolicy(), ops)
 }
 
-func (tm *TxnMonitor) addKeys(cluster *Cluster, policy *BatchPolicy, keys []*Key) {
+func (tm *TxnMonitor) addKeys(cluster *Cluster, policy *BatchPolicy, keys []*Key) Error {
 	ops := tm.getTranOpsFromKeys(policy.Txn, keys)
-	tm.addWriteKeys(cluster, policy.GetBasePolicy(), ops)
+	return tm.addWriteKeys(cluster, policy.GetBasePolicy(), ops)
 }
 
-func (tm *TxnMonitor) addKeysFromRecords(cluster *Cluster, policy *BatchPolicy, records []BatchRecordIfc) {
+func (tm *TxnMonitor) addKeysFromRecords(cluster *Cluster, policy *BatchPolicy, records []BatchRecordIfc) Error {
 	ops := tm.getTranOpsFromBatchRecords(policy.Txn, records)
 
-	if ops != nil {
-		tm.addWriteKeys(cluster, policy.GetBasePolicy(), ops)
+	if len(ops) > 0 {
+		return tm.addWriteKeys(cluster, policy.GetBasePolicy(), ops)
 	}
+	return nil
 }
 
 func (tm *TxnMonitor) getTranOps(txn *Txn, cmdKey *Key) []*Operation {
@@ -58,18 +57,18 @@ func (tm *TxnMonitor) getTranOps(txn *Txn, cmdKey *Key) []*Operation {
 
 	if txn.MonitorExists() {
 		return []*Operation{
-			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, NewBytesValue(cmdKey.Digest())),
+			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, cmdKey.Digest()),
 		}
 	} else {
 		return []*Operation{
 			PutOp(NewBin(binNameId, txn.Id())),
-			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, NewBytesValue(cmdKey.Digest())),
+			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, cmdKey.Digest()),
 		}
 	}
 }
 
 func (tm *TxnMonitor) getTranOpsFromKeys(txn *Txn, keys []*Key) []*Operation {
-	list := make([]Value, 0, len(keys))
+	list := make([]interface{}, 0, len(keys))
 
 	for _, key := range keys {
 		txn.SetNamespace(key.namespace)
@@ -79,13 +78,13 @@ func (tm *TxnMonitor) getTranOpsFromKeys(txn *Txn, keys []*Key) []*Operation {
 }
 
 func (tm *TxnMonitor) getTranOpsFromBatchRecords(txn *Txn, records []BatchRecordIfc) []*Operation {
-	list := make([]Value, 0, len(records))
+	list := make([]interface{}, 0, len(records))
 
 	for _, br := range records {
 		txn.SetNamespace(br.key().namespace)
 
 		if br.BatchRec().hasWrite {
-			list = append(list, NewBytesValue(br.key().Digest()))
+			list = append(list, br.key().Digest())
 		}
 	}
 
@@ -96,20 +95,15 @@ func (tm *TxnMonitor) getTranOpsFromBatchRecords(txn *Txn, records []BatchRecord
 	return tm.getTranOpsFromValueList(txn, list)
 }
 
-func (tm *TxnMonitor) getTranOpsFromValueList(txn *Txn, list []Value) []*Operation {
-	vals := make([]interface{}, len(list))
-	for i := range list {
-		vals[i] = list[i]
-	}
-
+func (tm *TxnMonitor) getTranOpsFromValueList(txn *Txn, list []interface{}) []*Operation {
 	if txn.MonitorExists() {
 		return []*Operation{
-			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, vals...),
+			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, list...),
 		}
 	} else {
 		return []*Operation{
 			PutOp(NewBin(binNameId, txn.Id())),
-			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, vals...),
+			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, list...),
 		}
 	}
 }
@@ -117,7 +111,11 @@ func (tm *TxnMonitor) getTranOpsFromValueList(txn *Txn, list []Value) []*Operati
 func (tm *TxnMonitor) addWriteKeys(cluster *Cluster, policy *BasePolicy, ops []*Operation) Error {
 	txnKey := getTxnMonitorKey(policy.Txn)
 	wp := tm.copyTimeoutPolicy(policy)
-	args := operateArgs{writePolicy: wp, operations: ops}
+	args, err := newOperateArgs(cluster, wp, txnKey, ops)
+	if err != nil {
+		return err
+	}
+
 	cmd, err := newTxnAddKeysCommand(cluster, txnKey, args)
 	if err != nil {
 		return err
@@ -141,7 +139,7 @@ func (tm *TxnMonitor) copyTimeoutPolicy(policy *BasePolicy) *WritePolicy {
 	// Note that the server only accepts the timeout on MRT monitor record create.
 	// The server ignores the MRT timeout field on successive MRT monitor record
 	// updates.
-	wp.Expiration = uint32(policy.Txn.timeout / time.Second)
+	wp.Expiration = uint32(policy.Txn.timeout)
 
 	return wp
 }

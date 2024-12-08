@@ -310,18 +310,15 @@ func packCDTIfcVarParamsAsArray(packer BufferEx, opType int16, ctx []*CDTContext
 		}
 		size += n
 	} else {
-		n, err = packShortRaw(packer, opType)
-		if err != nil {
-			return n, err
+		if n, err = packArrayBegin(packer, len(params)+1); err != nil {
+			return size + n, err
 		}
 		size += n
 
-		if len(params) > 0 {
-			if n, err = packArrayBegin(packer, len(params)); err != nil {
-				return size + n, err
-			}
-			size += n
+		if n, err = packObject(packer, opType, false); err != nil {
+			return size + n, err
 		}
+		size += n
 	}
 
 	if len(params) > 0 {

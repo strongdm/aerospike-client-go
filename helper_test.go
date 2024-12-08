@@ -50,3 +50,15 @@ func (nd *Node) ConnsCount() int {
 func (nd *Node) CloseConnections() {
 	nd.closeConnections()
 }
+
+// PartitionForWrite returns a partition for write purposes
+func ConfiguredAsStrongConsistency(client *Client, namespace string) bool {
+	// Must copy hashmap reference for copy on write semantics to work.
+	pmap := client.cluster.getPartitions()
+	p := pmap[namespace]
+	if p == nil {
+		return false
+	}
+
+	return p.SCMode
+}

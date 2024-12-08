@@ -15,21 +15,14 @@
 package aerospike
 
 import (
-	"fmt"
-
-	"github.com/aerospike/aerospike-client-go/v7/logger"
 	"github.com/aerospike/aerospike-client-go/v7/types"
-
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
 )
 
 // guarantee txnMarkRollForwardCommand implements command interface
 var _ command = &txnMarkRollForwardCommand{}
 
 type txnMarkRollForwardCommand struct {
-	singleCommand
-
-	policy *WritePolicy
+	baseWriteCommand
 }
 
 func newTxnMarkRollForwardCommand(
@@ -37,98 +30,26 @@ func newTxnMarkRollForwardCommand(
 	writePolicy *WritePolicy,
 	key *Key,
 ) (txnMarkRollForwardCommand, Error) {
-	var partition *Partition
-	var err Error
-	if cluster != nil {
-		partition, err = PartitionForWrite(cluster, &writePolicy.BasePolicy, key)
-		if err != nil {
-			return txnMarkRollForwardCommand{}, err
-		}
+	bwc, err := newBaseWriteCommand(cluster, writePolicy, key)
+	if err != nil {
+		return txnMarkRollForwardCommand{}, err
 	}
 
 	newMarkRollForwardCmd := txnMarkRollForwardCommand{
-		singleCommand: newSingleCommand(cluster, key, partition),
-		policy:        writePolicy,
+		baseWriteCommand: bwc,
 	}
 
 	return newMarkRollForwardCmd, nil
-}
-
-func (cmd *txnMarkRollForwardCommand) getPolicy(ifc command) Policy {
-	return cmd.policy
 }
 
 func (cmd *txnMarkRollForwardCommand) writeBuffer(ifc command) Error {
 	return cmd.setTxnMarkRollForward(cmd.key)
 }
 
-func (cmd *txnMarkRollForwardCommand) getNode(ifc command) (*Node, Error) {
-	return cmd.partition.GetNodeWrite(cmd.cluster)
-}
-
-func (cmd *txnMarkRollForwardCommand) prepareRetry(ifc command, isTimeout bool) bool {
-	cmd.partition.PrepareRetryWrite(isTimeout)
-	return true
-}
-
 func (cmd *txnMarkRollForwardCommand) parseResult(ifc command, conn *Connection) Error {
-	// Read proto and check if compressed
-	if _, err := conn.Read(cmd.dataBuffer, 8); err != nil {
-		logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
-		return err
-	}
-
-	if compressedSize := cmd.compressedSize(); compressedSize > 0 {
-		// Read compressed size
-		if _, err := conn.Read(cmd.dataBuffer, 8); err != nil {
-			logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
-			return err
-		}
-
-		if err := cmd.conn.initInflater(true, compressedSize); err != nil {
-			return newError(types.PARSE_ERROR, fmt.Sprintf("Error setting up zlib inflater for size `%d`: %s", compressedSize, err.Error()))
-		}
-
-		// Read header.
-		if _, err := conn.Read(cmd.dataBuffer, int(_MSG_TOTAL_HEADER_SIZE)); err != nil {
-			logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
-			return err
-		}
-	} else {
-		// Read header.
-		if _, err := conn.Read(cmd.dataBuffer[8:], int(_MSG_TOTAL_HEADER_SIZE)-8); err != nil {
-			logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
-			return err
-		}
-	}
-
-	// A number of these are commented out because we just don't care enough to read
-	// that section of the header. If we do care, uncomment and check!
-	sz := Buffer.BytesToInt64(cmd.dataBuffer, 0)
-
-	// Validate header to make sure we are at the beginning of a message
-	if err := cmd.validateHeader(sz); err != nil {
-		return err
-	}
-
-	headerLength := int(cmd.dataBuffer[8])
-	resultCode := types.ResultCode(cmd.dataBuffer[13] & 0xFF)
-	// generation := Buffer.BytesToUint32(cmd.dataBuffer, 14)
-	// expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 18))
-	// fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 26)) // almost certainly 0
-	// opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 28))
-	receiveSize := int((sz & 0xFFFFFFFFFFFF) - int64(headerLength))
-
-	// Read remaining message bytes.
-	if receiveSize > 0 {
-		if err := cmd.sizeBufferSz(receiveSize, false); err != nil {
-			return err
-		}
-		if _, err := conn.Read(cmd.dataBuffer, receiveSize); err != nil {
-			logger.Logger.Debug("Connection error reading data for ReadCommand: %s", err.Error())
-			return err
-		}
-
+	resultCode, err := cmd.parseHeader()
+	if err != nil {
+		return newCustomNodeError(cmd.node, err.resultCode())
 	}
 
 	if resultCode == 0 || resultCode == types.MRT_COMMITTED {
@@ -138,14 +59,6 @@ func (cmd *txnMarkRollForwardCommand) parseResult(ifc command, conn *Connection)
 	return newCustomNodeError(cmd.node, types.ResultCode(resultCode))
 }
 
-func (cmd *txnMarkRollForwardCommand) isRead() bool {
-	return false
-}
-
 func (cmd *txnMarkRollForwardCommand) Execute() Error {
 	return cmd.execute(cmd)
-}
-
-func (cmd *txnMarkRollForwardCommand) commandType() commandType {
-	return ttPut
 }

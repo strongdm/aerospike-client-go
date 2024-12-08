@@ -29,4 +29,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-retract v7.3.0 // `Client.BatchGetOperate` issue
+retract (
+	v7.3.0 // `Client.BatchGetOperate` issue
+	v7.7.0 // nil deref in tend logic
+)

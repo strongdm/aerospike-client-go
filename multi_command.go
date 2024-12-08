@@ -267,7 +267,6 @@ func (cmd *baseMultiCommand) parseFieldsRead(fieldCount int, key *Key) (err Erro
 	}
 }
 
-// TODO: Check for references and match
 func (cmd *baseMultiCommand) parseFieldsBatch(resultCode types.ResultCode, fieldCount int, br BatchRecordIfc) (err Error) {
 	if cmd.txn != nil {
 		version, err := cmd.parseVersion(fieldCount)
@@ -281,11 +280,11 @@ func (cmd *baseMultiCommand) parseFieldsBatch(resultCode types.ResultCode, field
 			cmd.txn.OnRead(br.BatchRec().Key, version)
 		}
 		return nil
+	} else {
+		return cmd.skipKey(fieldCount)
 	}
-	return cmd.skipKey(fieldCount)
 }
 
-// TODO: Check for references and match
 func (cmd *baseMultiCommand) parseFieldsWrite(resultCode types.ResultCode, fieldCount int, key *Key) (err Error) {
 	if cmd.txn != nil {
 		version, err := cmd.parseVersion(fieldCount)

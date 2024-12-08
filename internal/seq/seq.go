@@ -37,10 +37,10 @@ func ParDo[T any](seq []T, f func(T)) {
 	wg := new(sync.WaitGroup)
 	wg.Add(len(seq))
 	for i := range seq {
-		go func() {
+		go func(t T) {
 			defer wg.Done()
-			f(seq[i])
-		}()
+			f(t)
+		}(seq[i])
 	}
 	wg.Wait()
 }
@@ -77,8 +77,6 @@ func Clone[T any](seq []T) []T {
 	}
 
 	res := make([]T, len(seq))
-	for i := range seq {
-		res[i] = seq[i]
-	}
+	copy(res, seq)
 	return res
 }

@@ -14,11 +14,16 @@
 
 package aerospike
 
-type executeCommand struct {
-	readCommand
+import (
+	"github.com/aerospike/aerospike-client-go/v7/logger"
+	"github.com/aerospike/aerospike-client-go/v7/types"
+)
 
-	// overwrite
-	policy       *WritePolicy
+type executeCommand struct {
+	baseWriteCommand
+
+	record *Record
+
 	packageName  string
 	functionName string
 	args         *ValueArray
@@ -32,26 +37,16 @@ func newExecuteCommand(
 	functionName string,
 	args *ValueArray,
 ) (executeCommand, Error) {
-	var err Error
-	var partition *Partition
-	if cluster != nil {
-		partition, err = PartitionForWrite(cluster, &policy.BasePolicy, key)
-		if err != nil {
-			return executeCommand{}, err
-		}
-	}
-
-	readCommand, err := newReadCommand(cluster, &policy.BasePolicy, key, nil, partition)
+	bwc, err := newBaseWriteCommand(cluster, policy, key)
 	if err != nil {
 		return executeCommand{}, err
 	}
 
 	return executeCommand{
-		readCommand:  readCommand,
-		policy:       policy,
-		packageName:  packageName,
-		functionName: functionName,
-		args:         args,
+		baseWriteCommand: bwc,
+		packageName:      packageName,
+		functionName:     functionName,
+		args:             args,
 	}, nil
 }
 
@@ -59,17 +54,43 @@ func (cmd *executeCommand) writeBuffer(ifc command) Error {
 	return cmd.setUdf(cmd.policy, cmd.key, cmd.packageName, cmd.functionName, cmd.args)
 }
 
-func (cmd *executeCommand) getNode(ifc command) (*Node, Error) {
-	return cmd.partition.GetNodeWrite(cmd.cluster)
-}
+func (cmd *executeCommand) parseResult(ifc command, conn *Connection) Error {
+	rp, err := newRecordParser(&cmd.baseCommand)
+	if err != nil {
+		return err
+	}
 
-func (cmd *executeCommand) prepareRetry(ifc command, isTimeout bool) bool {
-	cmd.partition.PrepareRetryWrite(isTimeout)
-	return true
-}
+	if err := rp.parseFields(cmd.policy.Txn, cmd.key, true); err != nil {
+		return err
+	}
 
-func (cmd *executeCommand) isRead() bool {
-	return false
+	if rp.resultCode != 0 {
+		if rp.resultCode == types.KEY_NOT_FOUND_ERROR {
+			return ErrKeyNotFound.err()
+		} else if rp.resultCode == types.FILTERED_OUT {
+			return ErrFilteredOut.err()
+		} else if rp.resultCode == types.UDF_BAD_RESPONSE {
+			cmd.record, _ = rp.parseRecord(cmd.key, false, false)
+			err := cmd.handleUdfError(rp.resultCode)
+			logger.Logger.Debug("UDF execution error: " + err.Error())
+			return err
+		}
+
+		return newError(rp.resultCode)
+	}
+
+	if rp.opCount == 0 {
+		// data Bin was not returned
+		cmd.record = newRecord(cmd.node, cmd.key, nil, rp.generation, rp.expiration)
+		return nil
+	}
+
+	cmd.record, err = rp.parseRecord(cmd.key, false, false)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (cmd *executeCommand) Execute() Error {
@@ -78,4 +99,15 @@ func (cmd *executeCommand) Execute() Error {
 
 func (cmd *executeCommand) commandType() commandType {
 	return ttUDF
+}
+
+func (cmd *executeCommand) handleUdfError(resultCode types.ResultCode) Error {
+	if ret, exists := cmd.record.Bins["FAILURE"]; exists {
+		return newError(resultCode, ret.(string))
+	}
+	return newError(resultCode)
+}
+
+func (cmd *executeCommand) GetRecord() *Record {
+	return cmd.record
 }
