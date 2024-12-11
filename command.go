@@ -3523,27 +3523,30 @@ func (cmd *baseCommand) executeAt(ifc command, policy *BasePolicy, deadline time
 			return err
 		}
 
-		// Reset timeout in send buffer (destined for server) and socket.
-		binary.BigEndian.PutUint32(cmd.dataBuffer[22:], 0)
-		if !deadline.IsZero() {
-			serverTimeout := time.Until(deadline)
-			if serverTimeout < time.Millisecond {
-				serverTimeout = time.Millisecond
+		if _, rawPayload := ifc.(*writePayloadCommand); !rawPayload {
+			// Reset timeout in send buffer (destined for server) and socket.
+			binary.BigEndian.PutUint32(cmd.dataBuffer[22:], 0)
+			if !deadline.IsZero() {
+				serverTimeout := time.Until(deadline)
+				if serverTimeout < time.Millisecond {
+					serverTimeout = time.Millisecond
+				}
+				binary.BigEndian.PutUint32(cmd.dataBuffer[22:], uint32(serverTimeout/time.Millisecond))
 			}
-			binary.BigEndian.PutUint32(cmd.dataBuffer[22:], uint32(serverTimeout/time.Millisecond))
-		}
 
-		// now that the deadline has been set in the buffer, compress the contents
-		if err = cmd.compress(); err != nil {
-			applyTransactionErrorMetrics(cmd.node)
-			return chainErrors(err, errChain).iter(cmd.commandSentCounter).setNode(cmd.node).setInDoubt(ifc.isRead(), cmd.commandSentCounter)
-		}
+			// now that the deadline has been set in the buffer, compress the contents
+			if err = cmd.compress(); err != nil {
+				applyTransactionErrorMetrics(cmd.node)
+				return chainErrors(err, errChain).iter(cmd.commandSentCounter).setNode(cmd.node).setInDoubt(ifc.isRead(), cmd.commandSentCounter)
+			}
 
-		// now that the deadline has been set in the buffer, compress the contents
-		if err = cmd.prepareBuffer(ifc, deadline); err != nil {
-			applyTransactionErrorMetrics(cmd.node)
-			applyTransactionMetrics(cmd.node, ifc.commandType(), transStart)
-			return chainErrors(err, errChain).iter(cmd.commandSentCounter).setNode(cmd.node)
+			// TODO: Redundant. Move everything to the prepareBuffer method and remove the branch on top of this block.
+			// // now that the deadline has been set in the buffer, compress the contents
+			// if err = cmd.prepareBuffer(ifc, deadline); err != nil {
+			// 	applyTransactionErrorMetrics(cmd.node)
+			// 	applyTransactionMetrics(cmd.node, ifc.transactionType(), transStart)
+			// 	return chainErrors(err, errChain).iter(cmd.commandSentCounter).setNode(cmd.node)
+			// }
 		}
 
 		// Send command.

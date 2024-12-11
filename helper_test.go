@@ -62,3 +62,38 @@ func ConfiguredAsStrongConsistency(client *Client, namespace string) bool {
 
 	return p.SCMode
 }
+
+func NewWriteCommand(
+	cluster *Cluster,
+	policy *WritePolicy,
+	key *Key,
+	bins []*Bin,
+	binMap BinMap) (writeCommand, Error) {
+	return newWriteCommand(
+		cluster,
+		policy,
+		key,
+		bins,
+		binMap,
+		_WRITE)
+}
+
+func (cmd *writeCommand) WriteBuffer(ifc command) Error {
+	return cmd.writeBuffer(ifc)
+}
+
+func (cmd *writeCommand) Buffer() []byte {
+	return cmd.dataBuffer[:cmd.dataOffset]
+}
+
+func NewDeleteCommand(cluster *Cluster, policy *WritePolicy, key *Key) (*deleteCommand, Error) {
+	return newDeleteCommand(cluster, policy, key)
+}
+
+func (cmd *deleteCommand) WriteBuffer(ifc command) Error {
+	return cmd.writeBuffer(ifc)
+}
+
+func (cmd *deleteCommand) Buffer() []byte {
+	return cmd.dataBuffer[:cmd.dataOffset]
+}
