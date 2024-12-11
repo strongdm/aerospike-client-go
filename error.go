@@ -15,7 +15,6 @@
 package aerospike
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -23,9 +22,6 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-client-go/v7/types"
-	grpc "google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Error is the internal error interface for the Aerospike client's errors.
@@ -141,69 +137,6 @@ func newTimeoutError(e error, messages ...string) Error {
 
 func newCommonError(e error, messages ...string) Error {
 	ne := newError(types.COMMON_ERROR, messages...)
-	ne.wrap(e)
-	return ne
-}
-
-func newGrpcError(isWrite bool, e error, messages ...string) Error {
-	if ae, ok := e.(Error); ok && ae.resultCode() == types.GRPC_ERROR {
-		return ae
-	}
-
-	// convert error to Aerospike errors
-	if e == context.DeadlineExceeded {
-		return ErrNetTimeout.err().markInDoubt(isWrite)
-	} else if e == grpc.ErrClientConnTimeout {
-		return ErrNetTimeout.err().markInDoubt(isWrite)
-	} else if e == grpc.ErrServerStopped {
-		return ErrServerNotAvailable.err().markInDoubt(isWrite)
-	}
-
-	// try to convert the error
-	code := status.Code(e)
-	if code == codes.Unknown {
-		if s := status.Convert(e); s != nil {
-			code = s.Code()
-		}
-	}
-
-	switch code {
-	case codes.OK:
-		return nil
-	case codes.Canceled:
-		return ErrNetTimeout.err().markInDoubt(isWrite)
-	case codes.InvalidArgument:
-		return newError(types.PARAMETER_ERROR, messages...)
-	case codes.DeadlineExceeded:
-		return ErrNetTimeout.err().markInDoubt(isWrite)
-	case codes.NotFound:
-		return newError(types.SERVER_NOT_AVAILABLE, messages...).markInDoubt(isWrite)
-	case codes.PermissionDenied:
-		return newError(types.FAIL_FORBIDDEN, messages...)
-	case codes.ResourceExhausted:
-		return newError(types.QUOTA_EXCEEDED, messages...)
-	case codes.FailedPrecondition:
-		return newError(types.PARAMETER_ERROR, messages...)
-	case codes.Aborted:
-		return newError(types.SERVER_ERROR).markInDoubt(isWrite)
-	case codes.OutOfRange:
-		return newError(types.PARAMETER_ERROR, messages...)
-	case codes.Unimplemented:
-		return newError(types.SERVER_NOT_AVAILABLE, messages...)
-	case codes.Internal:
-		return newError(types.SERVER_ERROR, messages...).markInDoubt(isWrite)
-	case codes.Unavailable:
-		return newError(types.SERVER_NOT_AVAILABLE, messages...).markInDoubt(isWrite)
-	case codes.DataLoss:
-		return ErrNetwork.err().markInDoubt(isWrite)
-	case codes.Unauthenticated:
-		return newError(types.NOT_AUTHENTICATED, messages...)
-
-	case codes.AlreadyExists:
-	case codes.Unknown:
-	}
-
-	ne := newError(types.GRPC_ERROR, messages...).markInDoubt(isWrite)
 	ne.wrap(e)
 	return ne
 }
@@ -455,8 +388,6 @@ var (
 	ErrMaxRetriesExceeded              = newConstError(types.MAX_RETRIES_EXCEEDED, "command execution timed out on client: Exceeded number of retries. See `Policy.MaxRetries`.")
 	ErrInvalidParam                    = newConstError(types.PARAMETER_ERROR)
 	ErrLuaPoolEmpty                    = newConstError(types.COMMON_ERROR, "Error fetching a lua instance from pool")
-
-	errGRPCStreamEnd = newError(types.OK, "GRPC Steam was ended successfully")
 )
 
 //revive:enable

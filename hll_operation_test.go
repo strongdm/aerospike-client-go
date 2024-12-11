@@ -50,10 +50,6 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 	var illegalDescriptions [][]int
 
 	gg.BeforeEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-
 		for i := 0; i < nEntries; i++ {
 			entries = append(entries, as.StringValue("key "+strconv.Itoa(i)))
 		}
@@ -766,10 +762,6 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 	}
 
 	gg.It("Similarity should work", func() {
-		if *proxy {
-			gg.Skip("Too long for the Proxy Client")
-		}
-
 		overlaps := []float64{0.0001, 0.001, 0.01, 0.1, 0.5}
 
 		nEntries := 1 << 18

@@ -24,12 +24,6 @@ import (
 // ALL tests are isolated by SetName and Key, which are 50 random characters
 var _ = gg.Describe("Complex Index operations test", func() {
 
-	gg.BeforeEach(func() {
-		if *proxy {
-			gg.Skip("Not supported in Proxy Client")
-		}
-	})
-
 	gg.Describe("Complex Index Creation", func() {
 		// connection data
 		var err error

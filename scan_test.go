@@ -252,10 +252,6 @@ var _ = gg.Describe("Scan operations", func() {
 	})
 
 	gg.It("must Scan and get all records back for a specified node using Results() channel", func() {
-		if *proxy {
-			gg.Skip("Not supported in Proxy Client")
-		}
-
 		gm.Expect(len(keys)).To(gm.Equal(keyCount))
 
 		counter := 0
@@ -283,10 +279,6 @@ var _ = gg.Describe("Scan operations", func() {
 	})
 
 	gg.It("must Scan and get all records back for a specified node", func() {
-		if *proxy {
-			gg.Skip("Not supported in Proxy Client")
-		}
-
 		gm.Expect(len(keys)).To(gm.Equal(keyCount))
 
 		for _, node := range client.GetNodes() {

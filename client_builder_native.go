@@ -1,5 +1,3 @@
-//go:build !as_proxy
-
 // Copyright 2014-2022 Aerospike, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +28,7 @@ func CreateClientWithPolicyAndHost(typ ClientType, policy *ClientPolicy, hosts .
 	case CTNative:
 		return NewClientWithPolicyAndHost(policy, hosts...)
 	case CTProxy:
-		return nil, newError(types.GRPC_ERROR, "Proxy client mode not enabled. Pass -tags as_proxy during build")
+		return nil, newError(types.GRPC_ERROR, "Proxy client mode is not supported anymore.")
 	}
 	return nil, newError(types.SERVER_NOT_AVAILABLE, "Invalid client type")
 }

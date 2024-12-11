@@ -38,7 +38,7 @@ var _ = gg.Describe("Aerospike", func() {
 				gg.Skip("Not supported in server before v8")
 			}
 
-			if !as.ConfiguredAsStrongConsistency(client.(*as.Client), ns) {
+			if !as.ConfiguredAsStrongConsistency(client, ns) {
 				gg.Skip("Not supported in namespaces without Strong Consistency support")
 			}
 

@@ -34,10 +34,6 @@ var _ = gg.Describe("Security tests", func() {
 	var err error
 
 	gg.BeforeEach(func() {
-		if *proxy {
-			gg.Skip("Not supported in Proxy Client")
-		}
-
 		if !securityEnabled() {
 			gg.Skip("Security Tests are not supported in the Community Edition, or when security is not enabled for the Enterprise Edition.")
 		}

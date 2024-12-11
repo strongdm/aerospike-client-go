@@ -146,18 +146,6 @@ func (fltr *Filter) EstimateSize() (int, Error) {
 	return len(fltr.name) + szBegin + szEnd + 10, nil
 }
 
-func (fltr *Filter) grpcPackCtxPayload() []byte {
-	sz, err := fltr.estimatePackedCtxSize()
-	if err != nil {
-		panic(err)
-	}
-	buf := newBuffer(sz)
-	if _, err := fltr.packCtx(buf); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
-}
-
 // Retrieve packed Context.
 // For internal use only.
 func (fltr *Filter) packCtx(cmd BufferEx) (sz int, err Error) {

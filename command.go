@@ -2113,7 +2113,6 @@ func (cmd *baseCommand) setScan(policy *ScanPolicy, namespace *string, setName *
 	cmd.begin()
 	fieldCount := 0
 
-	// for grpc
 	partsFullSize := 0
 	partsPartialSize := 0
 	maxRecords := int64(0)
@@ -3352,14 +3351,6 @@ func (cmd *baseCommand) onInDoubt() {
 
 func (cmd *baseCommand) isRead() bool {
 	return true
-}
-
-// grpcPutBufferBack puts the assigned buffer back in the pool.
-// This function should only be called from grpc commands.
-func (cmd *baseCommand) grpcPutBufferBack() {
-	// put the data buffer back in the pool in case it gets used again
-	buffPool.Put(cmd.dataBuffer)
-	cmd.dataBuffer = nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////

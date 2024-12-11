@@ -91,7 +91,6 @@ var minConnsPerNode = flag.Int("minConnsPerNode", 0, "Minimum connections to mai
 var randBinData = flag.Bool("R", false, "Use dynamically generated random bin values instead of default static fixed bin values.")
 var useMarshalling = flag.Bool("M", false, "Use marshaling a struct instead of simple key/value operations")
 var debugMode = flag.Bool("d", false, "Run benchmarks in debug mode.")
-var grpc = flag.Bool("grpc", false, "Enable GRPC mode.")
 var profileMode = flag.Bool("profile", false, "Run benchmarks with profiler active on port 6060 by default.")
 var profilePort = flag.Int("profilePort", 6060, "Profile port.")
 var showUsage = flag.Bool("u", false, "Show usage information.")
@@ -172,25 +171,16 @@ func main() {
 	dbHost.TLSName = *tlsName
 
 	var client as.ClientIfc
-	if *grpc {
-		gclient, err := as.NewProxyClientWithPolicyAndHost(clientPolicy, dbHost)
-		if err != nil {
-			logger.Fatal(err)
-		}
-
-		client = gclient
-	} else {
-		nclient, err := as.NewClientWithPolicyAndHost(clientPolicy, dbHost)
-		if err != nil {
-			logger.Fatal(err)
-		}
-
-		cc, _ := nclient.WarmUp(*warmUp)
-		logger.Printf("Warm-up conns.:\t%d", cc)
-		logger.Println("Nodes Found:", nclient.GetNodeNames())
-
-		client = nclient
+	nclient, err := as.NewClientWithPolicyAndHost(clientPolicy, dbHost)
+	if err != nil {
+		logger.Fatal(err)
 	}
+
+	cc, _ := nclient.WarmUp(*warmUp)
+	logger.Printf("Warm-up conns.:\t%d", cc)
+	logger.Println("Nodes Found:", nclient.GetNodeNames())
+
+	client = nclient
 
 	go reporter()
 

@@ -28,8 +28,6 @@ type ExecuteTask struct {
 	taskID uint64
 	scan   bool
 
-	clnt ClientIfc
-
 	// The following map keeps an account of what nodes were ever observed with the job registered on them.
 	// If the job was ever observed, the task will return true for it is not found anymore (purged from task queue after completion)
 	observed map[string]struct{}
@@ -52,10 +50,6 @@ func (etsk *ExecuteTask) TaskId() uint64 {
 
 // IsDone queries all nodes for task completion status.
 func (etsk *ExecuteTask) IsDone() (bool, Error) {
-	if etsk.clnt != nil {
-		return etsk.grpcIsDone()
-	}
-
 	var module string
 	if etsk.scan {
 		module = "scan"

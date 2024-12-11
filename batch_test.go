@@ -216,10 +216,6 @@ var _ = gg.Describe("Aerospike", func() {
 
 		gg.Context("BatchOperate operations", func() {
 			gg.It("must return the result with same ordering", func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				key1, _ := as.NewKey(ns, set, 1)
 				op1 := as.NewBatchWrite(nil, key1, as.PutOp(as.NewBin("bin1", "a")), as.PutOp(as.NewBin("bin2", "b")))
 				op3 := as.NewBatchRead(nil, key1, []string{"bin2"})
@@ -292,10 +288,6 @@ var _ = gg.Describe("Aerospike", func() {
 			})
 
 			gg.It("must successfully execute a BatchOperate for many keys", func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				gm.Expect(err).ToNot(gm.HaveOccurred())
 				bwPolicy := as.NewBatchWritePolicy()
 				bdPolicy := as.NewBatchDeletePolicy()
@@ -329,10 +321,6 @@ var _ = gg.Describe("Aerospike", func() {
 			})
 
 			gg.It("must successfully execute a delete op", func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				gm.Expect(err).ToNot(gm.HaveOccurred())
 				bwPolicy := as.NewBatchWritePolicy()
 				bdPolicy := as.NewBatchDeletePolicy()
@@ -440,13 +428,9 @@ var _ = gg.Describe("Aerospike", func() {
 			})
 
 			gg.It("Overall command error should be reflected in API call error and not BatchRecord error", func() {
-				if *dbaas || *proxy {
-					gg.Skip("Not supported in DBAAS or PROXY environments")
-				}
-
 				var batchRecords []as.BatchRecordIfc
 				key, _ := as.NewKey(*namespace, set, 0)
-				for i := 0; i < len(nativeClient.Cluster().GetNodes())*2000000; i++ {
+				for i := 0; i < len(client.Cluster().GetNodes())*2000000; i++ {
 					batchRecords = append(batchRecords, as.NewBatchReadHeader(nil, key))
 				}
 
@@ -538,10 +522,6 @@ var _ = gg.Describe("Aerospike", func() {
 
 		gg.Context("BatchRead operations with TTL", func() {
 			gg.BeforeEach(func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				if serverIsOlderThan("7") {
 					gg.Skip("Not supported in server before v7.1")
 				}
@@ -641,12 +621,6 @@ var _ = gg.Describe("Aerospike", func() {
 		})
 
 		gg.Context("BatchUDF operations", func() {
-			gg.BeforeEach(func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-			})
-
 			gg.It("must return the results for single BatchUDF vs multiple", func() {
 				luaCode := `-- Create a record
 				function rec_create(rec, bins)
@@ -657,7 +631,7 @@ var _ = gg.Describe("Aerospike", func() {
 				registerUDF(luaCode, "test_ops.lua")
 
 				for _, keyCount := range []int{10, 1} {
-					nativeClient.Truncate(nil, ns, set, nil)
+					client.Truncate(nil, ns, set, nil)
 					batchRecords := []as.BatchRecordIfc{}
 
 					for k := 0; k < keyCount; k++ {
@@ -801,7 +775,7 @@ var _ = gg.Describe("Aerospike", func() {
 
 			gg.It("must return correct errors", func() {
 
-				nativeClient.Truncate(nil, ns, set, nil)
+				client.Truncate(nil, ns, set, nil)
 
 				udf := `function wait_and_update(rec, bins, n)
 						    info("WAIT_AND_WRITE BEGIN")
@@ -856,10 +830,6 @@ var _ = gg.Describe("Aerospike", func() {
 				}
 
 				if nsInfo(ns, "storage-engine") == "device" {
-					if *dbaas {
-						gg.Skip("Not supported in DBAAS environment")
-					}
-
 					writeBlockSize := 1048576
 					bigBin := make(map[string]string, 0)
 					bigBin["big_bin"] = strings.Repeat("a", writeBlockSize)
