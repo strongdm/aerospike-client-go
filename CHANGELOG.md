@@ -1,5 +1,20 @@
 # Change History
 
+## December 12 2024: v7.8.0-beta.1
+
+  Major feature release.
+
+- **New Features**
+  - [CLIENT-3159] Support writing raw payload to the server.
+  - [CLIENT-3183] [CLIENT-3203] [CLIENT-3193] [CLIENT-3190] Support Multi-Record Transactions.
+
+- **Fixes**
+  - [CLIENT-3214] Remove Proxy code.
+  - [CLIENT-3217] Do not send `nil` or `NullValue` as key to the server.
+
+- **Improvements**
+  - [CLIENT-3214] Support `-use-services-alternate` in test arguments.
+
 ## November 29 2024: v7.7.3
 
   Minor fix release.
