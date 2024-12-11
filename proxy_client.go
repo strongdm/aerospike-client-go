@@ -365,7 +365,7 @@ func (clnt *ProxyClient) ServerVersion(policy *InfoPolicy) (string, Error) {
 //-------------------------------------------------------
 
 // Put writes record bin(s) to the server.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // If the policy is nil, the default relevant policy will be used.
 func (clnt *ProxyClient) Put(policy *WritePolicy, key *Key, binMap BinMap) Error {
@@ -379,7 +379,7 @@ func (clnt *ProxyClient) Put(policy *WritePolicy, key *Key, binMap BinMap) Error
 }
 
 // PutBins writes record bin(s) to the server.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // This method avoids using the BinMap allocation and iteration and is lighter on GC.
 // If the policy is nil, the default relevant policy will be used.
@@ -398,7 +398,7 @@ func (clnt *ProxyClient) PutBins(policy *WritePolicy, key *Key, bins ...*Bin) Er
 //-------------------------------------------------------
 
 // Append appends bin value's string to existing record bin values.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // This call only works for string and []byte values.
 // If the policy is nil, the default relevant policy will be used.
@@ -424,7 +424,7 @@ func (clnt *ProxyClient) AppendBins(policy *WritePolicy, key *Key, bins ...*Bin)
 }
 
 // Prepend prepends bin value's string to existing record bin values.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // This call works only for string and []byte values.
 // If the policy is nil, the default relevant policy will be used.
@@ -454,7 +454,7 @@ func (clnt *ProxyClient) PrependBins(policy *WritePolicy, key *Key, bins ...*Bin
 //-------------------------------------------------------
 
 // Add adds integer bin values to existing record bin values.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // This call only works for integer values.
 // If the policy is nil, the default relevant policy will be used.
@@ -484,7 +484,7 @@ func (clnt *ProxyClient) AddBins(policy *WritePolicy, key *Key, bins ...*Bin) Er
 //-------------------------------------------------------
 
 // Delete deletes a record for specified key.
-// The policy specifies the transaction timeout.
+// The policy specifies the command timeout.
 // If the policy is nil, the default relevant policy will be used.
 func (clnt *ProxyClient) Delete(policy *WritePolicy, key *Key) (bool, Error) {
 	policy = clnt.getUsableWritePolicy(policy)

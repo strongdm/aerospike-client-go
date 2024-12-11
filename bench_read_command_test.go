@@ -32,7 +32,7 @@ func doReadCommandWriteBuffer(set string, value interface{}, b *testing.B) {
 	key, _ := NewKey("test", set, 1000)
 
 	for i := 0; i < b.N; i++ {
-		command, err := newReadCommand(nil, policy, key, binNames, nil)
+		command, err := newReadCommand(nil, policy, key, binNames)
 		if err != nil {
 			panic(err)
 		}

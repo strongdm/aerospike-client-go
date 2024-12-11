@@ -208,7 +208,7 @@ func newGrpcError(isWrite bool, e error, messages ...string) Error {
 	return ne
 }
 
-// SetInDoubt sets whether it is possible that the write transaction may have completed
+// SetInDoubt sets whether it is possible that the write command may have completed
 // even though this error was generated.  This may be the case when a
 // client error occurs (like timeout) after the command was sent to the server.
 func (ase *AerospikeError) setInDoubt(isRead bool, commandSentCounter int) Error {

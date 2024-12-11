@@ -17,7 +17,7 @@
 
 package aerospike
 
-// CommitLevel indicates the desired consistency guarantee when committing a transaction on the server.
+// CommitLevel indicates the desired consistency guarantee when committing a command on the server.
 type CommitLevel int
 
 const (

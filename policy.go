@@ -30,9 +30,13 @@ type Policy interface {
 // enforce the interface
 var _ Policy = &BasePolicy{}
 
-// BasePolicy encapsulates parameters for transaction policy attributes
+// BasePolicy encapsulates parameters for command policy attributes
 // used in all database operation calls.
 type BasePolicy struct {
+	// Multi-record transaction identifier (MRT). If this field is populated, the corresponding
+	// command will be included in the MRT. This field is ignored for scan/query.
+	Txn *Txn
+
 	// FilterExpression is the optional Filter Expression. Supported on Server v5.2+
 	FilterExpression *Expression
 
@@ -42,18 +46,18 @@ type BasePolicy struct {
 	// ReadModeSC indicates read policy for SC (strong consistency) namespaces.
 	ReadModeSC ReadModeSC //= SESSION;
 
-	// TotalTimeout specifies total transaction timeout.
+	// TotalTimeout specifies total command timeout.
 	//
 	// The TotalTimeout is tracked on the client and also sent to the server along
-	// with the transaction in the wire protocol. The client will most likely
-	// timeout first, but the server has the capability to Timeout the transaction.
+	// with the command in the wire protocol. The client will most likely
+	// timeout first, but the server has the capability to Timeout the command.
 	//
-	// If TotalTimeout is not zero and TotalTimeout is reached before the transaction
-	// completes, the transaction will abort with TotalTimeout error.
+	// If TotalTimeout is not zero and TotalTimeout is reached before the command
+	// completes, the command will abort with TotalTimeout error.
 	//
-	// If TotalTimeout is zero, there will be no time limit and the transaction will retry
+	// If TotalTimeout is zero, there will be no time limit and the command will retry
 	// on network timeouts/errors until MaxRetries is exceeded. If MaxRetries is exceeded, the
-	// transaction also aborts with Timeout error.
+	// command also aborts with Timeout error.
 	//
 	// Default for scan/query: 0 (no time limit and rely on MaxRetries)
 	//
@@ -63,21 +67,21 @@ type BasePolicy struct {
 	// SocketTimeout determines network timeout for each attempt.
 	//
 	// If SocketTimeout is not zero and SocketTimeout is reached before an attempt completes,
-	// the Timeout above is checked. If Timeout is not exceeded, the transaction
+	// the Timeout above is checked. If Timeout is not exceeded, the command
 	// is retried. If both SocketTimeout and Timeout are non-zero, SocketTimeout must be less
 	// than or equal to Timeout, otherwise Timeout will also be used for SocketTimeout.
 	//
 	// Default: 30s
 	SocketTimeout time.Duration
 
-	// MaxRetries determines the maximum number of retries before aborting the current transaction.
+	// MaxRetries determines the maximum number of retries before aborting the current command.
 	// The initial attempt is not counted as a retry.
 	//
-	// If MaxRetries is exceeded, the transaction will abort with an error.
+	// If MaxRetries is exceeded, the command will abort with an error.
 	//
 	// WARNING: Database writes that are not idempotent (such as AddOp)
 	// should not be retried because the write operation may be performed
-	// multiple times if the client timed out previous transaction attempts.
+	// multiple times if the client timed out previous command attempts.
 	// It's important to use a distinct WritePolicy for non-idempotent
 	// writes which sets maxRetries = 0;
 	//

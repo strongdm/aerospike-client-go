@@ -21,7 +21,10 @@ import "fmt"
 type ResultCode int
 
 const (
-	// GRPC_ERROR is wrapped and directly returned from the grpc library
+	// Multi-record transaction failed.
+	TXN_FAILED ResultCode = -22
+
+	// GRPC_ERROR is wrapped and directly returned from the grpc library.
 	GRPC_ERROR ResultCode = -21
 
 	// BATCH_FAILED means one or more keys failed in a batch.
@@ -153,10 +156,10 @@ const (
 	// FAIL_FORBIDDEN defines operation not allowed at this time.
 	FAIL_FORBIDDEN ResultCode = 22
 
-	// FAIL_ELEMENT_NOT_FOUND defines element Not Found in CDT
+	// FAIL_ELEMENT_NOT_FOUND defines element Not Found in CDT.
 	FAIL_ELEMENT_NOT_FOUND ResultCode = 23
 
-	// FAIL_ELEMENT_EXISTS defines element Already Exists in CDT
+	// FAIL_ELEMENT_EXISTS defines element Already Exists in CDT.
 	FAIL_ELEMENT_EXISTS ResultCode = 24
 
 	// ENTERPRISE_ONLY defines attempt to use an Enterprise feature on a Community server or a server
@@ -166,14 +169,14 @@ const (
 	// OP_NOT_APPLICABLE defines the operation cannot be applied to the current bin value on the server.
 	OP_NOT_APPLICABLE ResultCode = 26
 
-	// FILTERED_OUT defines the transaction was not performed because the filter was false.
+	// FILTERED_OUT defines the command was not performed because the filter was false.
 	FILTERED_OUT ResultCode = 27
 
 	// LOST_CONFLICT defines write command loses conflict to XDR.
-	LOST_CONFLICT = 28
+	LOST_CONFLICT ResultCode = 28
 
 	// Write can't complete until XDR finishes shipping.
-	XDR_KEY_BUSY = 32
+	XDR_KEY_BUSY ResultCode = 32
 
 	// QUERY_END defines there are no more records left for query.
 	QUERY_END ResultCode = 50
@@ -208,7 +211,7 @@ const (
 	// EXPIRED_PASSWORD defines security credential is invalid.
 	EXPIRED_PASSWORD ResultCode = 63
 
-	// FORBIDDEN_PASSWORD defines forbidden password (e.g. recently used)
+	// FORBIDDEN_PASSWORD defines forbidden password (e.g. recently used).
 	FORBIDDEN_PASSWORD ResultCode = 64
 
 	// INVALID_CREDENTIAL defines security credential is invalid.
@@ -226,14 +229,14 @@ const (
 	// INVALID_PRIVILEGE defines privilege is invalid.
 	INVALID_PRIVILEGE ResultCode = 72
 
-	// INVALID_WHITELIST defines invalid IP address whiltelist
-	INVALID_WHITELIST = 73
+	// INVALID_WHITELIST defines invalid IP address whitelist.
+	INVALID_WHITELIST ResultCode = 73
 
 	// QUOTAS_NOT_ENABLED defines Quotas not enabled on server.
-	QUOTAS_NOT_ENABLED = 74
+	QUOTAS_NOT_ENABLED ResultCode = 74
 
 	// INVALID_QUOTA defines invalid quota value.
-	INVALID_QUOTA = 75
+	INVALID_QUOTA ResultCode = 75
 
 	// NOT_AUTHENTICATED defines user must be authentication before performing database operations.
 	NOT_AUTHENTICATED ResultCode = 80
@@ -242,13 +245,32 @@ const (
 	ROLE_VIOLATION ResultCode = 81
 
 	// NOT_WHITELISTED defines command not allowed because sender IP address not whitelisted.
-	NOT_WHITELISTED = 82
+	NOT_WHITELISTED ResultCode = 82
 
 	// QUOTA_EXCEEDED defines Quota exceeded.
-	QUOTA_EXCEEDED = 83
+	QUOTA_EXCEEDED ResultCode = 83
 
 	// UDF_BAD_RESPONSE defines a user defined function returned an error code.
 	UDF_BAD_RESPONSE ResultCode = 100
+
+	// MRT record blocked by a different transaction.
+	MRT_BLOCKED ResultCode = 120
+
+	// MRT read version mismatch identified during commit.
+	// Some other command changed the record outside of the transaction.
+	MRT_VERSION_MISMATCH ResultCode = 121
+
+	// MRT deadline reached without a successful commit or abort.
+	MRT_EXPIRED ResultCode = 122
+
+	// MRT write command limit (4096) exceeded.
+	MRT_TOO_MANY_WRITES ResultCode = 123
+
+	// MRT was already committed.
+	MRT_COMMITTED ResultCode = 124
+
+	// MRT was already aborted.
+	MRT_ABORTED ResultCode = 125
 
 	// BATCH_DISABLED defines batch functionality has been disabled.
 	BATCH_DISABLED ResultCode = 150
@@ -311,6 +333,9 @@ const (
 // ResultCodeToString returns a human readable errors message based on the result code.
 func ResultCodeToString(resultCode ResultCode) string {
 	switch ResultCode(resultCode) {
+	case TXN_FAILED:
+		return "Multi-record transaction failed"
+
 	case GRPC_ERROR:
 		return "GRPC error"
 	case BATCH_FAILED:
@@ -535,6 +560,24 @@ func ResultCodeToString(resultCode ResultCode) string {
 	case UDF_BAD_RESPONSE:
 		return "UDF returned error"
 
+	case MRT_BLOCKED:
+		return "MRT record blocked by a different transaction"
+
+	case MRT_VERSION_MISMATCH:
+		return "MRT read version mismatch identified during commit. Some other command changed the record outside of the transaction"
+
+	case MRT_EXPIRED:
+		return "MRT deadline reached without a successful commit or abort"
+
+	case MRT_TOO_MANY_WRITES:
+		return "MRT write command limit (4096) exceeded"
+
+	case MRT_COMMITTED:
+		return "MRT was already committed"
+
+	case MRT_ABORTED:
+		return "MRT was already aborted"
+
 	case BATCH_DISABLED:
 		return "Batch functionality has been disabled"
 
@@ -599,8 +642,10 @@ func ResultCodeToString(resultCode ResultCode) string {
 
 func (rc ResultCode) String() string {
 	switch rc {
+	case TXN_FAILED:
+		return "TXN_FAILED"
 	case GRPC_ERROR:
-		return "GRPC error"
+		return "GRPC_ERROR"
 	case BATCH_FAILED:
 		return "BATCH_FAILED"
 	case NO_RESPONSE:
@@ -749,6 +794,18 @@ func (rc ResultCode) String() string {
 		return "QUOTA_EXCEEDED"
 	case UDF_BAD_RESPONSE:
 		return "UDF_BAD_RESPONSE"
+	case MRT_BLOCKED:
+		return "MRT_BLOCKED"
+	case MRT_VERSION_MISMATCH:
+		return "MRT_VERSION_MISMATCH"
+	case MRT_EXPIRED:
+		return "MRT_EXPIRED"
+	case MRT_TOO_MANY_WRITES:
+		return "MRT_TOO_MANY_WRITES"
+	case MRT_COMMITTED:
+		return "MRT_COMMITTED"
+	case MRT_ABORTED:
+		return "MRT_ABORTED"
 	case BATCH_DISABLED:
 		return "BATCH_DISABLED"
 	case BATCH_MAX_REQUESTS_EXCEEDED:

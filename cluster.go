@@ -980,7 +980,7 @@ func (clstr *Cluster) MetricsEnabled() bool {
 	return clstr.metricsEnabled.Load()
 }
 
-// EnableMetrics enables the cluster transaction metrics gathering.
+// EnableMetrics enables the cluster command metrics gathering.
 // If the parameters for the histogram in the policy are the different from the one already
 // on the cluster, the metrics will be reset.
 func (clstr *Cluster) EnableMetrics(policy *MetricsPolicy) {
@@ -1004,7 +1004,7 @@ func (clstr *Cluster) EnableMetrics(policy *MetricsPolicy) {
 	}
 }
 
-// DisableMetrics disables the cluster transaction metrics gathering.
+// DisableMetrics disables the cluster command metrics gathering.
 func (clstr *Cluster) DisableMetrics() {
 	clstr.metricsEnabled.Store(false)
 }

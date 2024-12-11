@@ -23,7 +23,7 @@ import (
 )
 
 // PutObject writes record bin(s) to the server.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // If the policy is nil, the default relevant policy will be used.
 // A struct can be tagged to influence the way the object is put in the database:
@@ -46,6 +46,12 @@ import (
 func (clnt *Client) PutObject(policy *WritePolicy, key *Key, obj interface{}) (err Error) {
 	policy = clnt.getUsableWritePolicy(policy)
 
+	if policy.Txn != nil {
+		if err := txnMonitor.addKey(clnt.cluster, policy, key); err != nil {
+			return err
+		}
+	}
+
 	binMap := marshal(obj)
 	command, err := newWriteCommand(clnt.cluster, policy, key, nil, binMap, _WRITE)
 	if err != nil {
@@ -62,15 +68,16 @@ func (clnt *Client) PutObject(policy *WritePolicy, key *Key, obj interface{}) (e
 func (clnt *Client) GetObject(policy *BasePolicy, key *Key, obj interface{}) Error {
 	policy = clnt.getUsablePolicy(policy)
 
+	if policy.Txn != nil {
+		if err := policy.Txn.prepareRead(key.namespace); err != nil {
+			return err
+		}
+	}
+
 	rval := reflect.ValueOf(obj)
 	binNames := objectMappings.getFields(rval.Type())
 
-	partition, err := PartitionForRead(clnt.cluster, policy, key)
-	if err != nil {
-		return err
-	}
-
-	command, err := newReadCommand(clnt.cluster, policy, key, binNames, partition)
+	command, err := newReadCommand(clnt.cluster, policy, key, binNames)
 	if err != nil {
 		return err
 	}
@@ -86,7 +93,7 @@ func (clnt *Client) getObjectDirect(policy *BasePolicy, key *Key, rval *reflect.
 	policy = clnt.getUsablePolicy(policy)
 
 	binNames := objectMappings.getFields(rval.Type())
-	command, err := newReadCommand(clnt.cluster, policy, key, binNames, nil)
+	command, err := newReadCommand(clnt.cluster, policy, key, binNames)
 	if err != nil {
 		return err
 	}

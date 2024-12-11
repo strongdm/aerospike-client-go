@@ -98,3 +98,15 @@ func newOperateArgs(
 	}
 	return res, nil
 }
+
+func (oa *operateArgs) size() (int, Error) {
+	res := 0
+	for i := range oa.operations {
+		size, err := oa.operations[i].size()
+		if err != nil {
+			return -1, err
+		}
+		res += size
+	}
+	return res, nil
+}

@@ -23,7 +23,7 @@ import (
 )
 
 // PutObject writes record bin(s) to the server.
-// The policy specifies the transaction timeout, record expiration and how the transaction is
+// The policy specifies the command timeout, record expiration and how the command is
 // handled when the record already exists.
 // If the policy is nil, the default relevant policy will be used.
 // A struct can be tagged to influence the way the object is put in the database:

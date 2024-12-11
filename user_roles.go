@@ -27,7 +27,7 @@ type UserRoles struct {
 	// Current statistics by offset are:
 	//
 	// 0: read quota in records per second
-	// 1: single record read transaction rate (TPS)
+	// 1: single record read command rate (TPS)
 	// 2: read scan/query record per second rate (RPS)
 	// 3: number of limitless read scans/queries
 	//
@@ -38,7 +38,7 @@ type UserRoles struct {
 	// Current statistics by offset are:
 	//
 	// 0: write quota in records per second
-	// 1: single record write transaction rate (TPS)
+	// 1: single record write command rate (TPS)
 	// 2: write scan/query record per second rate (RPS)
 	// 3: number of limitless write scans/queries
 	//

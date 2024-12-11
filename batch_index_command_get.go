@@ -19,7 +19,7 @@ import (
 )
 
 type batchIndexCommandGet struct {
-	batchCommandGet
+	batchCommandOperate
 }
 
 func newBatchIndexCommandGet(
@@ -28,24 +28,16 @@ func newBatchIndexCommandGet(
 	policy *BatchPolicy,
 	records []*BatchRead,
 	isOperation bool,
-) *batchIndexCommandGet {
-	var node *Node
-	if batch != nil {
-		node = batch.Node
+) batchIndexCommandGet {
+	recIfcs := make([]BatchRecordIfc, len(records))
+	for i := range records {
+		recIfcs[i] = records[i]
 	}
 
-	res := &batchIndexCommandGet{
-		batchCommandGet{
-			batchCommand: batchCommand{
-				client:           client,
-				baseMultiCommand: *newMultiCommand(node, nil, isOperation),
-				policy:           policy,
-				batch:            batch,
-			},
-			records:      nil,
-			indexRecords: records,
-		},
+	res := batchIndexCommandGet{
+		batchCommandOperate: newBatchCommandOperate(client, batch, policy, recIfcs),
 	}
+	res.txn = policy.Txn
 	return res
 }
 
@@ -57,10 +49,6 @@ func (cmd *batchIndexCommandGet) cloneBatchCommand(batch *batchNode) batcher {
 	return &res
 }
 
-func (cmd *batchIndexCommandGet) writeBuffer(ifc command) Error {
-	return cmd.setBatchIndexRead(cmd.policy, cmd.indexRecords, cmd.batch)
-}
-
 func (cmd *batchIndexCommandGet) Execute() Error {
 	if len(cmd.batch.offsets) == 1 {
 		return cmd.executeSingle(cmd.client)
@@ -69,7 +57,8 @@ func (cmd *batchIndexCommandGet) Execute() Error {
 }
 
 func (cmd *batchIndexCommandGet) executeSingle(client clientIfc) Error {
-	for i, br := range cmd.indexRecords {
+	for _, br := range cmd.records {
+		br := br.(*BatchRead)
 		var ops []*Operation
 		if br.headerOnly() {
 			ops = []*Operation{GetHeaderOp()}
@@ -81,9 +70,9 @@ func (cmd *batchIndexCommandGet) executeSingle(client clientIfc) Error {
 			ops = br.Ops
 		}
 		res, err := client.operate(cmd.policy.toWritePolicy(), br.Key, true, ops...)
-		cmd.indexRecords[i].setRecord(res)
+		br.setRecord(res)
 		if err != nil {
-			cmd.indexRecords[i].setRawError(err)
+			br.setRawError(err)
 
 			// Key not found is NOT an error for batch requests
 			if err.resultCode() == types.KEY_NOT_FOUND_ERROR {
@@ -102,8 +91,4 @@ func (cmd *batchIndexCommandGet) executeSingle(client clientIfc) Error {
 		}
 	}
 	return nil
-}
-
-func (cmd *batchIndexCommandGet) generateBatchNodes(cluster *Cluster) ([]*batchNode, Error) {
-	return newBatchNodeListRecords(cluster, cmd.policy, cmd.indexRecords, cmd.sequenceAP, cmd.sequenceSC, cmd.batch)
 }

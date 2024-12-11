@@ -70,7 +70,7 @@ func (cmd *grpcScanPartitionCommand) shouldRetry(e Error) bool {
 	panic(unreachable)
 }
 
-func (cmd *grpcScanPartitionCommand) transactionType() transactionType {
+func (cmd *grpcScanPartitionCommand) commandType() commandType {
 	return ttScan
 }
 

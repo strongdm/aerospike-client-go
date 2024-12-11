@@ -16,84 +16,55 @@ package aerospike
 
 import (
 	"github.com/aerospike/aerospike-client-go/v7/types"
-
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
 )
 
 // guarantee existsCommand implements command interface
 var _ command = &existsCommand{}
 
 type existsCommand struct {
-	singleCommand
+	baseReadCommand
 
-	policy *BasePolicy
 	exists bool
 }
 
-func newExistsCommand(cluster *Cluster, policy *BasePolicy, key *Key) (*existsCommand, Error) {
-	var err Error
-	var partition *Partition
-	if cluster != nil {
-		partition, err = PartitionForRead(cluster, policy, key)
-		if err != nil {
-			return nil, err
-		}
+func newExistsCommand(cluster *Cluster, policy *BasePolicy, key *Key) (existsCommand, Error) {
+	brc, err := newBaseReadCommand(cluster, policy, key)
+	if err != nil {
+		return existsCommand{}, err
 	}
 
-	return &existsCommand{
-		singleCommand: newSingleCommand(cluster, key, partition),
-		policy:        policy,
+	return existsCommand{
+		baseReadCommand: brc,
 	}, nil
-}
-
-func (cmd *existsCommand) getPolicy(ifc command) Policy {
-	return cmd.policy
 }
 
 func (cmd *existsCommand) writeBuffer(ifc command) Error {
 	return cmd.setExists(cmd.policy, cmd.key)
 }
 
-func (cmd *existsCommand) getNode(ifc command) (*Node, Error) {
-	return cmd.partition.GetNodeRead(cmd.cluster)
-}
-
-func (cmd *existsCommand) prepareRetry(ifc command, isTimeout bool) bool {
-	cmd.partition.PrepareRetryRead(isTimeout)
-	return true
-}
-
 func (cmd *existsCommand) parseResult(ifc command, conn *Connection) Error {
-	// Read header.
-	if _, err := conn.Read(cmd.dataBuffer, int(_MSG_TOTAL_HEADER_SIZE)); err != nil {
+	rp, err := newRecordParser(&cmd.baseCommand)
+	if err != nil {
 		return err
 	}
 
-	header := Buffer.BytesToInt64(cmd.dataBuffer, 0)
-
-	// Validate header to make sure we are at the beginning of a message
-	if err := cmd.validateHeader(header); err != nil {
+	if err := rp.parseFields(cmd.policy.Txn, cmd.key, false); err != nil {
 		return err
 	}
 
-	resultCode := cmd.dataBuffer[13] & 0xFF
-
-	switch types.ResultCode(resultCode) {
-	case 0:
+	switch rp.resultCode {
+	case types.OK:
 		cmd.exists = true
 	case types.KEY_NOT_FOUND_ERROR:
 		cmd.exists = false
 	case types.FILTERED_OUT:
-		if err := cmd.emptySocket(conn); err != nil {
-			return err
-		}
 		cmd.exists = true
 		return ErrFilteredOut.err()
 	default:
-		return newError(types.ResultCode(resultCode))
+		return newError(rp.resultCode)
 	}
 
-	return cmd.emptySocket(conn)
+	return nil
 }
 
 func (cmd *existsCommand) Exists() bool {
@@ -104,6 +75,6 @@ func (cmd *existsCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *existsCommand) transactionType() transactionType {
+func (cmd *existsCommand) commandType() commandType {
 	return ttExists
 }

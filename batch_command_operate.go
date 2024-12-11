@@ -37,13 +37,13 @@ func newBatchCommandOperate(
 	batch *batchNode,
 	policy *BatchPolicy,
 	records []BatchRecordIfc,
-) *batchCommandOperate {
+) batchCommandOperate {
 	var node *Node
 	if batch != nil {
 		node = batch.Node
 	}
 
-	res := &batchCommandOperate{
+	res := batchCommandOperate{
 		batchCommand: batchCommand{
 			client:           client,
 			baseMultiCommand: *newMultiCommand(node, nil, true),
@@ -52,6 +52,8 @@ func newBatchCommandOperate(
 		},
 		records: records,
 	}
+	res.txn = policy.Txn
+
 	return res
 }
 
@@ -105,7 +107,7 @@ func (cmd *batchCommandOperate) parseRecordResults(ifc command, receiveSize int)
 		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
 		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
 
-		err := cmd.skipKey(fieldCount)
+		err := cmd.parseFieldsBatch(resultCode, fieldCount, cmd.records[batchIndex])
 		if err != nil {
 			return false, err
 		}
@@ -291,7 +293,7 @@ func (cmd *batchCommandOperate) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *batchCommandOperate) transactionType() transactionType {
+func (cmd *batchCommandOperate) commandType() commandType {
 	if cmd.isRead() {
 		return ttBatchRead
 	}

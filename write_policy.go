@@ -39,7 +39,7 @@ type WritePolicy struct {
 	// indicates that the generation is not used to restrict writes.
 	GenerationPolicy GenerationPolicy //= GenerationPolicy.NONE;
 
-	// Desired consistency guarantee when committing a transaction on the server. The default
+	// Desired consistency guarantee when committing a command on the server. The default
 	// (COMMIT_ALL) indicates that the server should wait for master and all replica commits to
 	// be successful before returning success to the client.
 	CommitLevel CommitLevel //= COMMIT_ALL
@@ -70,7 +70,7 @@ type WritePolicy struct {
 	// by default.
 	RespondPerEachOp bool
 
-	// DurableDelete leaves a tombstone for the record if the transaction results in a record deletion.
+	// DurableDelete leaves a tombstone for the record if the command results in a record deletion.
 	// This prevents deleted records from reappearing after node failures.
 	// Valid for Aerospike Server Enterprise Edition 3.10+ only.
 	DurableDelete bool

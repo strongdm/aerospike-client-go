@@ -1015,7 +1015,7 @@ type AerospikeResponsePayload struct {
 	//	   The request failed at the proxy. This status should be used
 	//	   as the client result code.
 	Status int32 `protobuf:"varint,2,opt,name=status,proto3" json:"status,omitempty"`
-	// This flag indicates that the write transaction may have completed,
+	// This flag indicates that the write command may have completed,
 	// even though the client sees an error.
 	InDoubt bool `protobuf:"varint,3,opt,name=inDoubt,proto3" json:"inDoubt,omitempty"`
 	// Aerospike wire format request payload.
@@ -1123,9 +1123,9 @@ type ScanPolicy struct {
 	// decrease the size of data sent over the network.
 	Compress bool `protobuf:"varint,4,opt,name=compress,proto3" json:"compress,omitempty"`
 	// Optional expression filter. If filterExp exists and evaluates to false, the
-	// transaction is ignored.
+	// command is ignored.
 	Expression []byte `protobuf:"bytes,5,opt,name=expression,proto3,oneof" json:"expression,omitempty"`
-	// Total transaction timeout in milliseconds.
+	// Total command timeout in milliseconds.
 	// Default for all other commands: 1000ms
 	TotalTimeout *uint32 `protobuf:"varint,6,opt,name=totalTimeout,proto3,oneof" json:"totalTimeout,omitempty"`
 	// Approximate number of records to return to client. This number is divided by the
@@ -1539,9 +1539,9 @@ type QueryPolicy struct {
 	// decrease the size of data sent over the network.
 	Compress bool `protobuf:"varint,5,opt,name=compress,proto3" json:"compress,omitempty"`
 	// Optional expression filter. If filterExp exists and evaluates to false, the
-	// transaction is ignored.
+	// command is ignored.
 	Expression []byte `protobuf:"bytes,6,opt,name=expression,proto3,oneof" json:"expression,omitempty"`
-	// Total transaction timeout in milliseconds.
+	// Total command timeout in milliseconds.
 	// Default for all other commands: 1000ms
 	TotalTimeout *uint32 `protobuf:"varint,7,opt,name=totalTimeout,proto3,oneof" json:"totalTimeout,omitempty"`
 	// Maximum number of concurrent requests to server nodes at any point in time.
@@ -2123,9 +2123,9 @@ type BackgroundExecutePolicy struct {
 	// decrease the size of data sent over the network.
 	Compress bool `protobuf:"varint,4,opt,name=compress,proto3" json:"compress,omitempty"`
 	// Optional expression filter. If filterExp exists and evaluates to false, the
-	// transaction is ignored.
+	// command is ignored.
 	Expression []byte `protobuf:"bytes,5,opt,name=expression,proto3,oneof" json:"expression,omitempty"`
-	// Total transaction timeout in milliseconds.
+	// Total command timeout in milliseconds.
 	// Default for all other commands: 1000ms
 	TotalTimeout *uint32 `protobuf:"varint,6,opt,name=totalTimeout,proto3,oneof" json:"totalTimeout,omitempty"`
 	// Send user defined key in addition to hash digest on both reads and writes.
@@ -2146,7 +2146,7 @@ type BackgroundExecutePolicy struct {
 	//
 	// Default: GenerationPolicy.NONE
 	GenerationPolicy *GenerationPolicy `protobuf:"varint,9,opt,name=generationPolicy,proto3,enum=GenerationPolicy,oneof" json:"generationPolicy,omitempty"`
-	// Desired consistency guarantee when committing a transaction on the server. The default
+	// Desired consistency guarantee when committing a command on the server. The default
 	// (COMMIT_ALL) indicates that the server should wait for master and all replica commits to
 	// be successful before returning success to the client.
 	//
@@ -2186,7 +2186,7 @@ type BackgroundExecutePolicy struct {
 	//
 	// Default: false
 	RespondAllOps *bool `protobuf:"varint,13,opt,name=respondAllOps,proto3,oneof" json:"respondAllOps,omitempty"`
-	// If the transaction results in a record deletion, leave a tombstone for the record.
+	// If the command results in a record deletion, leave a tombstone for the record.
 	// This prevents deleted records from reappearing after node failures.
 	// Valid for Aerospike Server Enterprise Edition 3.10+ only.
 	//
