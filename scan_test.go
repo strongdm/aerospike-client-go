@@ -19,9 +19,9 @@ import (
 	"math"
 	"math/rand"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	ast "github.com/aerospike/aerospike-client-go/v7/types"
-	particleType "github.com/aerospike/aerospike-client-go/v7/types/particle_type"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	ast "github.com/aerospike/aerospike-client-go/v8/types"
+	particleType "github.com/aerospike/aerospike-client-go/v8/types/particle_type"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -252,10 +252,6 @@ var _ = gg.Describe("Scan operations", func() {
 	})
 
 	gg.It("must Scan and get all records back for a specified node using Results() channel", func() {
-		if *proxy {
-			gg.Skip("Not supported in Proxy Client")
-		}
-
 		gm.Expect(len(keys)).To(gm.Equal(keyCount))
 
 		counter := 0
@@ -283,10 +279,6 @@ var _ = gg.Describe("Scan operations", func() {
 	})
 
 	gg.It("must Scan and get all records back for a specified node", func() {
-		if *proxy {
-			gg.Skip("Not supported in Proxy Client")
-		}
-
 		gm.Expect(len(keys)).To(gm.Equal(keyCount))
 
 		for _, node := range client.GetNodes() {

@@ -32,9 +32,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	asl "github.com/aerospike/aerospike-client-go/v7/logger"
-	ast "github.com/aerospike/aerospike-client-go/v7/types"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	asl "github.com/aerospike/aerospike-client-go/v8/logger"
+	ast "github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 // TStats is a goroutine's statistics values
@@ -76,10 +76,10 @@ var keyFilePassphrase = flag.String("keyFilePass", "", `Passphrase for encrypted
 var binDef = flag.String("o", "I", "Bin object specification.\n\tI\t: Read/write integer bin.\n\tB:200\t: Read/write byte array bin of length 200.\n\tS:50\t: Read/write string bin of length 50.")
 var concurrency = flag.Int("c", 32, "Number of goroutines to generate load.")
 var workloadDef = flag.String("w", "I:100", "Desired workload.\n\tI:60\t: Linear 'insert' workload initializing 60% of the keys.\n\tRU:80\t: Random read/update workload with 80% reads and 20% writes.")
-var latency = flag.String("L", "", "Latency <columns>,<shift>.\n\tShow transaction latency percentages using elapsed time ranges.\n\t<columns> Number of elapsed time ranges.\n\t<shift>   Power of 2 multiple between each range starting at column 3.")
+var latency = flag.String("L", "", "Latency <columns>,<shift>.\n\tShow command latency percentages using elapsed time ranges.\n\t<columns> Number of elapsed time ranges.\n\t<shift>   Power of 2 multiple between each range starting at column 3.")
 var throughput = flag.Int64("g", 0, "Throttle transactions per second to a maximum value.\n\tIf tps is zero, do not throttle throughput.")
 var timeout = flag.Int("T", 0, "Read/Write timeout in milliseconds.")
-var maxRetries = flag.Int("maxRetries", 2, "Maximum number of retries before aborting the current transaction.")
+var maxRetries = flag.Int("maxRetries", 2, "Maximum number of retries before aborting the current command.")
 var connQueueSize = flag.Int("queueSize", 128, "Maximum number of connections to pool.")
 var maxErrorRate = flag.Int("maxErrorRate", 50, "Maximum Error Rate for the Circuit-Breaker to trigger.")
 var errorRateWindow = flag.Int("errorRateWindow", 1, "Error Rate Window for the Circuit-Breaker to trigger.")
@@ -91,7 +91,6 @@ var minConnsPerNode = flag.Int("minConnsPerNode", 0, "Minimum connections to mai
 var randBinData = flag.Bool("R", false, "Use dynamically generated random bin values instead of default static fixed bin values.")
 var useMarshalling = flag.Bool("M", false, "Use marshaling a struct instead of simple key/value operations")
 var debugMode = flag.Bool("d", false, "Run benchmarks in debug mode.")
-var grpc = flag.Bool("grpc", false, "Enable GRPC mode.")
 var profileMode = flag.Bool("profile", false, "Run benchmarks with profiler active on port 6060 by default.")
 var profilePort = flag.Int("profilePort", 6060, "Profile port.")
 var showUsage = flag.Bool("u", false, "Show usage information.")
@@ -171,26 +170,14 @@ func main() {
 	dbHost := as.NewHost(*host, *port)
 	dbHost.TLSName = *tlsName
 
-	var client as.ClientIfc
-	if *grpc {
-		gclient, err := as.NewProxyClientWithPolicyAndHost(clientPolicy, dbHost)
-		if err != nil {
-			logger.Fatal(err)
-		}
-
-		client = gclient
-	} else {
-		nclient, err := as.NewClientWithPolicyAndHost(clientPolicy, dbHost)
-		if err != nil {
-			logger.Fatal(err)
-		}
-
-		cc, _ := nclient.WarmUp(*warmUp)
-		logger.Printf("Warm-up conns.:\t%d", cc)
-		logger.Println("Nodes Found:", nclient.GetNodeNames())
-
-		client = nclient
+	client, err := as.NewClientWithPolicyAndHost(clientPolicy, dbHost)
+	if err != nil {
+		logger.Fatal(err)
 	}
+
+	cc, _ := client.WarmUp(*warmUp)
+	logger.Printf("Warm-up conns.:\t%d", cc)
+	logger.Println("Nodes Found:", client.GetNodeNames())
 
 	go reporter()
 
@@ -420,7 +407,7 @@ func incOnError(op, timeout *int, err error) {
 	}
 }
 
-func runBench_I(client as.ClientIfc, ident int, times int) {
+func runBench_I(client *as.Client, ident int, times int) {
 	defer wg.Done()
 
 	xr := NewXorRand()
@@ -529,7 +516,7 @@ func runBench_I(client as.ClientIfc, ident int, times int) {
 	countReportChan <- &TStats{false, WCount, 0, writeErr, 0, writeTOErr, 0, wMinLat, wMaxLat, 0, 0, wLatTotal, 0, wLatList, nil}
 }
 
-func runBench_RU(client as.ClientIfc, ident int, times int) {
+func runBench_RU(client *as.Client, ident int, times int) {
 	defer wg.Done()
 
 	xr := NewXorRand()
@@ -694,7 +681,7 @@ func min(a, b int64) int64 {
 	return b
 }
 
-// listens to transaction report channel, and print them out on intervals
+// listens to command report channel, and print them out on intervals
 func reporter() {
 	var totalWCount, totalRCount int
 	var totalWErrCount, totalRErrCount int

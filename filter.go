@@ -17,7 +17,7 @@ package aerospike
 import (
 	"fmt"
 
-	ParticleType "github.com/aerospike/aerospike-client-go/v7/types/particle_type"
+	ParticleType "github.com/aerospike/aerospike-client-go/v8/types/particle_type"
 )
 
 // Filter specifies a query filter definition.
@@ -144,18 +144,6 @@ func (fltr *Filter) EstimateSize() (int, Error) {
 	}
 
 	return len(fltr.name) + szBegin + szEnd + 10, nil
-}
-
-func (fltr *Filter) grpcPackCtxPayload() []byte {
-	sz, err := fltr.estimatePackedCtxSize()
-	if err != nil {
-		panic(err)
-	}
-	buf := newBuffer(sz)
-	if _, err := fltr.packCtx(buf); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
 }
 
 // Retrieve packed Context.

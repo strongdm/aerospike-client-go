@@ -101,6 +101,36 @@ func VarBytesToInt64(buf []byte, offset int, len int) int64 {
 	return val
 }
 
+// Int64ToVersionBytes will convert a uint64 to a 7 byte record version for MRT.
+func Uint64ToVersionBytes(v uint64, buf []byte, offset int) {
+	buf[offset] = (byte)(v >> 0)
+	offset++
+	buf[offset] = (byte)(v >> 8)
+	offset++
+	buf[offset] = (byte)(v >> 16)
+	offset++
+	buf[offset] = (byte)(v >> 24)
+	offset++
+	buf[offset] = (byte)(v >> 32)
+	offset++
+	buf[offset] = (byte)(v >> 40)
+	offset++
+	buf[offset] = (byte)(v >> 48)
+}
+
+// VersionBytesToUint64 converts a 7 byte record version to an uint64 for MRT.
+func VersionBytesToUint64(buf []byte, offset int) *uint64 {
+	res := (((uint64(buf[offset]) & 0xFF) << 0) |
+		((uint64(buf[offset+1]) & 0xFF) << 8) |
+		((uint64(buf[offset+2]) & 0xFF) << 16) |
+		((uint64(buf[offset+3]) & 0xFF) << 24) |
+		((uint64(buf[offset+4]) & 0xFF) << 32) |
+		((uint64(buf[offset+5]) & 0xFF) << 40) |
+		((uint64(buf[offset+6]) & 0xFF) << 48))
+
+	return &res
+}
+
 // BytesToInt32 converts a slice into int32; only maximum of 4 bytes will be used
 func BytesToInt32(buf []byte, offset int) int32 {
 	return int32(binary.BigEndian.Uint32(buf[offset : offset+uint32sz]))

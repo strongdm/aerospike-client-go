@@ -15,6 +15,8 @@
 package aerospike
 
 // ScanPolicy encapsulates parameters used in scan operations.
+//
+// Inherited Policy fields Policy.Txn are ignored in scan commands.
 type ScanPolicy struct {
 	MultiPolicy
 }

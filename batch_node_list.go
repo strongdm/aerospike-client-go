@@ -14,7 +14,7 @@
 
 package aerospike
 
-import "github.com/aerospike/aerospike-client-go/v7/types"
+import "github.com/aerospike/aerospike-client-go/v8/types"
 
 func newBatchNodeList(cluster *Cluster, policy *BatchPolicy, keys []*Key, records []*BatchRecord, hasWrite bool) ([]*batchNode, Error) {
 	nodes := cluster.GetNodes()
@@ -293,18 +293,6 @@ func newBatchOperateNodeListIfc(cluster *Cluster, policy *BatchPolicy, records [
 		}
 	}
 	return batchNodes, errs
-}
-
-func newGrpcBatchOperateListIfc(policy *BatchPolicy, records []BatchRecordIfc) (*batchNode, Error) {
-	// Split keys by server node.
-	batchNode := new(batchNode)
-	for i := range records {
-		b := records[i]
-		b.prepare()
-		batchNode.AddKey(i)
-	}
-
-	return batchNode, nil
 }
 
 func findBatchNode(nodes []*batchNode, node *Node) *batchNode {

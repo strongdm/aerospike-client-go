@@ -31,6 +31,14 @@ func New[K comparable, V any](length int) *Map[K, V] {
 	}
 }
 
+// Exists atomically checks if a key exists in the map
+func (m *Map[K, V]) Exists(k K) bool {
+	m.mutex.RLock()
+	_, ok := m.m[k]
+	m.mutex.RUnlock()
+	return ok
+}
+
 // Get atomically retrieves an element from the Map.
 func (m *Map[K, V]) Get(k K) V {
 	m.mutex.RLock()
@@ -63,7 +71,7 @@ func (m *Map[K, V]) Length() int {
 	return res
 }
 
-// Length returns the Map size.
+// Clone copies the map and returns the copy.
 func (m *Map[K, V]) Clone() map[K]V {
 	m.mutex.RLock()
 	res := make(map[K]V, len(m.m))
@@ -73,6 +81,25 @@ func (m *Map[K, V]) Clone() map[K]V {
 	m.mutex.RUnlock()
 
 	return res
+}
+
+// Returns the keys from the map.
+func (m *Map[K, V]) Keys() []K {
+	m.mutex.RLock()
+	res := make([]K, 0, len(m.m))
+	for k := range m.m {
+		res = append(res, k)
+	}
+	m.mutex.RUnlock()
+
+	return res
+}
+
+// Clear will remove all entries.
+func (m *Map[K, V]) Clear() {
+	m.mutex.Lock()
+	m.m = make(map[K]V, len(m.m))
+	m.mutex.Unlock()
 }
 
 // Delete will remove the key and return its value.

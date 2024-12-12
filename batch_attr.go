@@ -19,6 +19,7 @@ type batchAttr struct {
 	readAttr   int
 	writeAttr  int
 	infoAttr   int
+	txnAttr    int
 	expiration uint32
 	generation uint32
 	hasWrite   bool
@@ -33,7 +34,18 @@ func newBatchAttr(policy *BatchPolicy, rattr int) *batchAttr {
 	return res
 }
 
-func newBatchAttrOps(rp *BatchPolicy, wp *BatchWritePolicy, ops []*Operation) {
+func newBatchAttrOpsAttr(policy *BatchPolicy, rattr int, ops []*Operation) *batchAttr {
+	res := &batchAttr{}
+	res.setRead(policy)
+	res.readAttr = rattr
+	if len(ops) > 0 {
+		res.adjustRead(ops)
+	}
+	return res
+}
+
+// TODO: Check references
+func newBatchAttrOps(rp *BatchPolicy, wp *BatchWritePolicy, ops []*Operation) *batchAttr {
 	res := &batchAttr{}
 	readAllBins := false
 	readHeader := false
@@ -78,6 +90,8 @@ func newBatchAttrOps(rp *BatchPolicy, wp *BatchWritePolicy, ops []*Operation) {
 			res.readAttr |= _INFO1_NOBINDATA
 		}
 	}
+
+	return res
 }
 
 func (ba *batchAttr) setRead(rp *BatchPolicy) {
@@ -135,26 +149,15 @@ func (ba *batchAttr) setBatchRead(rp *BatchReadPolicy) {
 }
 
 func (ba *batchAttr) adjustRead(ops []*Operation) {
-	readAllBins := false
-	readHeader := false
-
 	for _, op := range ops {
 		switch op.opType {
-		case _READ_HEADER:
-			readHeader = true
-		case _BIT_READ, _EXP_READ, _HLL_READ, _MAP_READ, _CDT_READ, _READ:
-			// Read all bins if no bin is specified.
-			if op.binName == "" {
-				readAllBins = true
+		case _READ:
+			if len(op.binName) == 0 {
+				ba.readAttr |= _INFO1_GET_ALL
 			}
-		default:
+		case _READ_HEADER:
+			ba.readAttr |= _INFO1_NOBINDATA
 		}
-	}
-
-	if readAllBins {
-		ba.readAttr |= _INFO1_GET_ALL
-	} else if readHeader {
-		ba.readAttr |= _INFO1_NOBINDATA
 	}
 }
 
@@ -290,4 +293,16 @@ func (ba *batchAttr) setBatchDelete(dp *BatchDeletePolicy) {
 	if dp.CommitLevel == COMMIT_MASTER {
 		ba.infoAttr |= _INFO3_COMMIT_MASTER
 	}
+}
+
+func (ba *batchAttr) setTxn(attr int) {
+	ba.filterExp = nil
+	ba.readAttr = 0
+	ba.writeAttr = _INFO2_WRITE | _INFO2_RESPOND_ALL_OPS | _INFO2_DURABLE_DELETE
+	ba.infoAttr = 0
+	ba.txnAttr = attr
+	ba.expiration = 0
+	ba.generation = 0
+	ba.hasWrite = true
+	ba.sendKey = false
 }

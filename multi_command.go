@@ -19,8 +19,8 @@ import (
 	"math/rand"
 	"reflect"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type baseMultiCommand struct {
@@ -43,8 +43,7 @@ type baseMultiCommand struct {
 	resObjMappings map[string][]int
 	selectCases    []reflect.SelectCase
 
-	bc      bufferedConn
-	grpcEOS bool
+	bc bufferedConn
 }
 
 var multiObjectParser func(
@@ -231,6 +230,73 @@ func (cmd *baseMultiCommand) parseKey(fieldCount int, bval *int64) (*Key, Error)
 	return &Key{namespace: namespace, setName: setName, digest: digest, userKey: userKey}, nil
 }
 
+func (cmd *baseMultiCommand) parseVersion(fieldCount int) (*uint64, Error) {
+	var version *uint64
+
+	for i := 0; i < fieldCount; i++ {
+		if err := cmd.readBytes(4); err != nil {
+			return nil, err
+		}
+
+		fieldlen := int(Buffer.BytesToUint32(cmd.dataBuffer, 0))
+		if err := cmd.readBytes(fieldlen); err != nil {
+			return nil, err
+		}
+
+		fieldType := FieldType(cmd.dataBuffer[0])
+		size := fieldlen - 1
+
+		if fieldType == RECORD_VERSION && size == 7 {
+			version = Buffer.VersionBytesToUint64(cmd.dataBuffer, cmd.dataOffset)
+		}
+	}
+	return version, nil
+}
+
+func (cmd *baseMultiCommand) parseFieldsRead(fieldCount int, key *Key) (err Error) {
+	if cmd.txn != nil {
+		version, err := cmd.parseVersion(fieldCount)
+		if err != nil {
+			return err
+		}
+		cmd.txn.OnRead(key, version)
+		return nil
+	} else {
+		return cmd.skipKey(fieldCount)
+	}
+}
+
+func (cmd *baseMultiCommand) parseFieldsBatch(resultCode types.ResultCode, fieldCount int, br BatchRecordIfc) (err Error) {
+	if cmd.txn != nil {
+		version, err := cmd.parseVersion(fieldCount)
+		if err != nil {
+			return err
+		}
+
+		if br.BatchRec().hasWrite {
+			cmd.txn.OnWrite(br.BatchRec().Key, version, resultCode)
+		} else {
+			cmd.txn.OnRead(br.BatchRec().Key, version)
+		}
+		return nil
+	} else {
+		return cmd.skipKey(fieldCount)
+	}
+}
+
+func (cmd *baseMultiCommand) parseFieldsWrite(resultCode types.ResultCode, fieldCount int, key *Key) (err Error) {
+	if cmd.txn != nil {
+		version, err := cmd.parseVersion(fieldCount)
+		if err != nil {
+			return err
+		}
+
+		cmd.txn.OnWrite(key, version, resultCode)
+		return nil
+	}
+	return cmd.skipKey(fieldCount)
+}
+
 func (cmd *baseMultiCommand) skipKey(fieldCount int) (err Error) {
 	for i := 0; i < fieldCount; i++ {
 		if err = cmd.readBytes(4); err != nil {
@@ -360,7 +426,7 @@ func (cmd *baseMultiCommand) parseRecordResults(ifc command, receiveSize int) (b
 				}
 			}
 
-			if cmd.grpcEOS || !cmd.tracker.allowRecord(cmd.nodePartitions) {
+			if !cmd.tracker.allowRecord(cmd.nodePartitions) {
 				continue
 			}
 
@@ -386,7 +452,7 @@ func (cmd *baseMultiCommand) parseRecordResults(ifc command, receiveSize int) (b
 				return false, err
 			}
 
-			if cmd.grpcEOS || !cmd.tracker.allowRecord(cmd.nodePartitions) {
+			if !cmd.tracker.allowRecord(cmd.nodePartitions) {
 				continue
 			}
 

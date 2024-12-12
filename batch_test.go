@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -216,10 +216,6 @@ var _ = gg.Describe("Aerospike", func() {
 
 		gg.Context("BatchOperate operations", func() {
 			gg.It("must return the result with same ordering", func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				key1, _ := as.NewKey(ns, set, 1)
 				op1 := as.NewBatchWrite(nil, key1, as.PutOp(as.NewBin("bin1", "a")), as.PutOp(as.NewBin("bin2", "b")))
 				op3 := as.NewBatchRead(nil, key1, []string{"bin2"})
@@ -292,10 +288,6 @@ var _ = gg.Describe("Aerospike", func() {
 			})
 
 			gg.It("must successfully execute a BatchOperate for many keys", func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				gm.Expect(err).ToNot(gm.HaveOccurred())
 				bwPolicy := as.NewBatchWritePolicy()
 				bdPolicy := as.NewBatchDeletePolicy()
@@ -329,10 +321,6 @@ var _ = gg.Describe("Aerospike", func() {
 			})
 
 			gg.It("must successfully execute a delete op", func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				gm.Expect(err).ToNot(gm.HaveOccurred())
 				bwPolicy := as.NewBatchWritePolicy()
 				bdPolicy := as.NewBatchDeletePolicy()
@@ -440,13 +428,9 @@ var _ = gg.Describe("Aerospike", func() {
 			})
 
 			gg.It("Overall command error should be reflected in API call error and not BatchRecord error", func() {
-				if *dbaas || *proxy {
-					gg.Skip("Not supported in DBAAS or PROXY environments")
-				}
-
 				var batchRecords []as.BatchRecordIfc
 				key, _ := as.NewKey(*namespace, set, 0)
-				for i := 0; i < len(nativeClient.Cluster().GetNodes())*2000000; i++ {
+				for i := 0; i < len(client.Cluster().GetNodes())*2000000; i++ {
 					batchRecords = append(batchRecords, as.NewBatchReadHeader(nil, key))
 				}
 
@@ -477,17 +461,17 @@ var _ = gg.Describe("Aerospike", func() {
 				op5 := as.ListGetByValueRangeOp(binName, nil, as.NewValue(9), as.ListReturnTypeValue)
 				r, err := client.Operate(wpolicy, key, op1, op2, op3, op4, op5)
 				gm.Expect(err).ToNot(gm.HaveOccurred())
-				gm.Expect(r.Bins[binName]).To(gm.Equal([]interface{}{[]interface{}{7, 8}, []interface{}{0, 3, 4, 5}, []interface{}{7, 8, 9, 10}, []interface{}{2, 3, 4, 5}, []interface{}{7, 6, 5, 8}}))
+				gm.Expect(r.Bins[binName]).To(gm.Equal(as.OpResults{[]any{7, 8}, []any{0, 3, 4, 5}, []any{7, 8, 9, 10}, []any{2, 3, 4, 5}, []any{7, 6, 5, 8}}))
 
 				// Remove
 				op6 := as.ListRemoveByValueRangeOp(binName, as.ListReturnTypeIndex, as.NewValue(7), nil)
 				r2, err2 := client.Operate(wpolicy, key, op6)
 				gm.Expect(err2).ToNot(gm.HaveOccurred())
-				gm.Expect(r2.Bins[binName]).To(gm.Equal([]interface{}{0, 3, 4, 5}))
+				gm.Expect(r2.Bins[binName]).To(gm.Equal([]any{0, 3, 4, 5}))
 
 				r3, err3 := client.Get(nil, key)
 				gm.Expect(err3).ToNot(gm.HaveOccurred())
-				gm.Expect(r3.Bins[binName]).To(gm.Equal([]interface{}{6, 5}))
+				gm.Expect(r3.Bins[binName]).To(gm.Equal([]any{6, 5}))
 			})
 
 			gg.It("must return the result with same ordering", func() {
@@ -538,10 +522,6 @@ var _ = gg.Describe("Aerospike", func() {
 
 		gg.Context("BatchRead operations with TTL", func() {
 			gg.BeforeEach(func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				if serverIsOlderThan("7") {
 					gg.Skip("Not supported in server before v7.1")
 				}
@@ -641,12 +621,6 @@ var _ = gg.Describe("Aerospike", func() {
 		})
 
 		gg.Context("BatchUDF operations", func() {
-			gg.BeforeEach(func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-			})
-
 			gg.It("must return the results for single BatchUDF vs multiple", func() {
 				luaCode := `-- Create a record
 				function rec_create(rec, bins)
@@ -657,12 +631,12 @@ var _ = gg.Describe("Aerospike", func() {
 				registerUDF(luaCode, "test_ops.lua")
 
 				for _, keyCount := range []int{10, 1} {
-					nativeClient.Truncate(nil, ns, set, nil)
+					client.Truncate(nil, ns, set, nil)
 					batchRecords := []as.BatchRecordIfc{}
 
 					for k := 0; k < keyCount; k++ {
 						key, _ := as.NewKey(ns, set, k)
-						args := make(map[interface{}]interface{})
+						args := make(map[any]any)
 						args["bin1_str"] = "a"
 						batchRecords = append(batchRecords, as.NewBatchUDF(
 							nil,
@@ -679,7 +653,7 @@ var _ = gg.Describe("Aerospike", func() {
 					for i := 0; i < keyCount; i++ {
 						gm.Expect(batchRecords[i].BatchRec().Err).To(gm.BeNil())
 						gm.Expect(batchRecords[i].BatchRec().ResultCode).To(gm.Equal(types.OK))
-						gm.Expect(batchRecords[i].BatchRec().Record.Bins).To(gm.Equal(as.BinMap{"SUCCESS": map[interface{}]interface{}{"bin1_str": "a"}}))
+						gm.Expect(batchRecords[i].BatchRec().Record.Bins).To(gm.Equal(as.BinMap{"SUCCESS": map[any]any{"bin1_str": "a"}}))
 					}
 				}
 			})
@@ -702,7 +676,7 @@ var _ = gg.Describe("Aerospike", func() {
 				batchRecords := []as.BatchRecordIfc{}
 
 				key1, _ := as.NewKey(randString(10), set, 1)
-				args := make(map[interface{}]interface{})
+				args := make(map[any]any)
 				args["bin1_str"] = "a"
 				batchRecords = append(batchRecords, as.NewBatchUDF(
 					nil,
@@ -801,7 +775,7 @@ var _ = gg.Describe("Aerospike", func() {
 
 			gg.It("must return correct errors", func() {
 
-				nativeClient.Truncate(nil, ns, set, nil)
+				client.Truncate(nil, ns, set, nil)
 
 				udf := `function wait_and_update(rec, bins, n)
 						    info("WAIT_AND_WRITE BEGIN")
@@ -856,10 +830,6 @@ var _ = gg.Describe("Aerospike", func() {
 				}
 
 				if nsInfo(ns, "storage-engine") == "device" {
-					if *dbaas {
-						gg.Skip("Not supported in DBAAS environment")
-					}
-
 					writeBlockSize := 1048576
 					bigBin := make(map[string]string, 0)
 					bigBin["big_bin"] = strings.Repeat("a", writeBlockSize)
@@ -925,7 +895,7 @@ var _ = gg.Describe("Aerospike", func() {
 						gm.Expect(rec.Err).ToNot(gm.HaveOccurred())
 						gm.Expect(rec.ResultCode).To(gm.Equal(types.OK))
 						gm.Expect(rec.InDoubt).To(gm.BeFalse())
-						gm.Expect(rec.Record.Bins["SUCCESS"]).To(gm.Equal(map[interface{}]interface{}{"status": "OK"}))
+						gm.Expect(rec.Record.Bins["SUCCESS"]).To(gm.Equal(map[any]any{"status": "OK"}))
 					}
 
 					recs, err := client.BatchGet(nil, keys)

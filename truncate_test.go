@@ -19,7 +19,7 @@ import (
 	"math/rand"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -27,12 +27,6 @@ import (
 
 // ALL tests are isolated by SetName and Key, which are 50 random characters
 var _ = gg.Describe("Truncate operations test", func() {
-
-	gg.BeforeEach(func() {
-		if *proxy {
-			gg.Skip("Not supported in Proxy Client")
-		}
-	})
 
 	gg.Context("Truncate", func() {
 		var err error

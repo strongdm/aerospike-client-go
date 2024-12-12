@@ -28,20 +28,15 @@ type batcher interface {
 	generateBatchNodes(*Cluster) ([]*batchNode, Error)
 	setSequence(int, int)
 
-	executeSingle(clientIfc) Error
-}
-
-type clientIfc interface {
-	ClientIfc
-
-	operate(*WritePolicy, *Key, bool, ...*Operation) (*Record, Error)
-	execute(policy *WritePolicy, key *Key, packageName string, functionName string, args ...Value) (*Record, Error)
+	// executeSingle(*Client) Error
+	setInDoubt(batcher)
+	inDoubt()
 }
 
 type batchCommand struct {
 	baseMultiCommand
 
-	client     clientIfc
+	client     *Client
 	batch      *batchNode
 	policy     *BatchPolicy
 	sequenceAP int
@@ -50,6 +45,20 @@ type batchCommand struct {
 	splitRetry bool
 
 	filteredOutCnt int
+}
+
+func (cmd *batchCommand) setInDoubt(ifc batcher) {
+	// Set error/inDoubt for keys associated this batch command when
+	// the command was not retried and split. If a split retry occurred,
+	// those new subcommands have already set inDoubt on the affected
+	// subset of keys.
+	if !cmd.splitRetry {
+		ifc.inDoubt()
+	}
+}
+
+func (cmd *batchCommand) inDoubt() {
+	// do nothing by defaut
 }
 
 func (cmd *batchCommand) prepareRetry(ifc command, isTimeout bool) bool {
@@ -79,12 +88,14 @@ func (cmd *batchCommand) retryBatch(ifc batcher, cluster *Cluster, deadline time
 		return false, nil
 	}
 
+	cmd.splitRetry = true
+
 	// Run batch requests sequentially in same thread.
 	var ferr Error
 	for _, batchNode := range batchNodes {
 		command := ifc.cloneBatchCommand(batchNode)
 		command.setSequence(cmd.sequenceAP, cmd.sequenceSC)
-		if err := command.executeAt(command, cmd.policy.GetBasePolicy(), deadline, iteration); err != nil {
+		if err := command.executeIter(command, iteration); err != nil {
 			ferr = chainErrors(err, ferr)
 			if !cmd.policy.AllowPartialResults {
 				return false, ferr
@@ -103,12 +114,16 @@ func (cmd *batchCommand) getPolicy(ifc command) Policy {
 	return cmd.policy
 }
 
-func (cmd *batchCommand) transactionType() transactionType {
+func (cmd *batchCommand) commandType() commandType {
 	return ttNone
 }
 
 func (cmd *batchCommand) Execute() Error {
-	return cmd.execute(cmd)
+	err := cmd.execute(cmd)
+	if err != nil {
+		cmd.setInDoubt(cmd)
+	}
+	return err
 }
 
 func (cmd *batchCommand) filteredOut() int {

@@ -15,8 +15,8 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchCommandUDF struct {
@@ -32,7 +32,7 @@ type batchCommandUDF struct {
 }
 
 func newBatchCommandUDF(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	batchUDFPolicy *BatchUDFPolicy,
@@ -63,6 +63,7 @@ func newBatchCommandUDF(
 		args:           args,
 		attr:           attr,
 	}
+	res.txn = policy.Txn
 	return res
 }
 
@@ -89,6 +90,15 @@ func (cmd *batchCommandUDF) parseRecordResults(ifc command, receiveSize int) (bo
 			return false, err
 		}
 		resultCode := types.ResultCode(cmd.dataBuffer[5] & 0xFF)
+		generation := Buffer.BytesToUint32(cmd.dataBuffer, 6)
+		expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 10))
+		batchIndex := int(Buffer.BytesToUint32(cmd.dataBuffer, 14))
+		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
+		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
+		err := cmd.parseFieldsWrite(resultCode, fieldCount, cmd.keys[batchIndex])
+		if err != nil {
+			return false, err
+		}
 
 		// The only valid server return codes are "ok" and "not found" and "filtered out".
 		// If other return codes are received, then abort the batch.
@@ -109,16 +119,6 @@ func (cmd *batchCommandUDF) parseRecordResults(ifc command, receiveSize int) (bo
 		// If cmd is the end marker of the response, do not proceed further
 		if (info3 & _INFO3_LAST) == _INFO3_LAST {
 			return false, nil
-		}
-
-		generation := Buffer.BytesToUint32(cmd.dataBuffer, 6)
-		expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 10))
-		batchIndex := int(Buffer.BytesToUint32(cmd.dataBuffer, 14))
-		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
-		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
-		err := cmd.skipKey(fieldCount)
-		if err != nil {
-			return false, err
 		}
 
 		if resultCode == 0 {
@@ -183,7 +183,7 @@ func (cmd *batchCommandUDF) isRead() bool {
 	return !cmd.attr.hasWrite
 }
 
-func (cmd *batchCommandUDF) executeSingle(client clientIfc) Error {
+func (cmd *batchCommandUDF) executeSingle(client *Client) Error {
 	for i, key := range cmd.keys {
 		policy := cmd.batchUDFPolicy.toWritePolicy(cmd.policy)
 		policy.RespondPerEachOp = true

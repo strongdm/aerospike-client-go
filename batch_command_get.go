@@ -17,8 +17,8 @@ package aerospike
 import (
 	"reflect"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchCommandGet struct {
@@ -37,7 +37,7 @@ type batchCommandGet struct {
 	objectsFound []bool
 }
 
-type batchObjectParsetIfc interface {
+type batchObjectParserIfc interface {
 	buf() []byte
 	readBytes(int) Error
 	object(int) *reflect.Value
@@ -46,7 +46,7 @@ type batchObjectParsetIfc interface {
 // this method uses reflection.
 // Will not be set if performance flag is passed for the build.
 var batchObjectParser func(
-	cmd batchObjectParsetIfc,
+	cmd batchObjectParserIfc,
 	offset int,
 	opCount int,
 	fieldCount int,
@@ -55,7 +55,7 @@ var batchObjectParser func(
 ) Error
 
 func newBatchCommandGet(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	keys []*Key,
@@ -83,6 +83,7 @@ func newBatchCommandGet(
 		records:  records,
 		readAttr: readAttr,
 	}
+	res.txn = policy.Txn
 	return res
 }
 
@@ -103,6 +104,10 @@ func (cmd *batchCommandGet) object(index int) *reflect.Value {
 }
 
 func (cmd *batchCommandGet) writeBuffer(ifc command) Error {
+	if cmd.batch.Node.SupportsBatchAny() {
+		attr := newBatchAttrOpsAttr(cmd.policy, cmd.readAttr, cmd.ops)
+		return cmd.setBatchOperate(cmd.policy, cmd.keys, cmd.batch, cmd.binNames, cmd.ops, attr)
+	}
 	return cmd.setBatchRead(cmd.policy, cmd.keys, cmd.batch, cmd.binNames, cmd.ops, cmd.readAttr)
 }
 
@@ -117,6 +122,17 @@ func (cmd *batchCommandGet) parseRecordResults(ifc command, receiveSize int) (bo
 			return false, err
 		}
 		resultCode := types.ResultCode(cmd.dataBuffer[5] & 0xFF)
+		generation := Buffer.BytesToUint32(cmd.dataBuffer, 6)
+		expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 10))
+		batchIndex := int(Buffer.BytesToUint32(cmd.dataBuffer, 14))
+		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
+		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
+		if len(cmd.keys) > batchIndex {
+			err := cmd.parseFieldsRead(fieldCount, cmd.keys[batchIndex])
+			if err != nil {
+				return false, err
+			}
+		}
 
 		// The only valid server return codes are "ok" and "not found" and "filtered out".
 		// If other return codes are received, then abort the batch.
@@ -135,16 +151,7 @@ func (cmd *batchCommandGet) parseRecordResults(ifc command, receiveSize int) (bo
 			return false, nil
 		}
 
-		generation := Buffer.BytesToUint32(cmd.dataBuffer, 6)
-		expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 10))
-		batchIndex := int(Buffer.BytesToUint32(cmd.dataBuffer, 14))
-		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
-		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
-		err := cmd.skipKey(fieldCount)
-		if err != nil {
-			return false, err
-		}
-
+		var err Error
 		if cmd.indexRecords != nil {
 			if len(cmd.indexRecords) > 0 {
 				if resultCode == 0 {
@@ -217,11 +224,11 @@ func (cmd *batchCommandGet) parseRecord(key *Key, opCount int, generation, expir
 	return newRecord(cmd.node, key, bins, generation, expiration), nil
 }
 
-func (cmd *batchCommandGet) transactionType() transactionType {
+func (cmd *batchCommandGet) commandType() commandType {
 	return ttBatchRead
 }
 
-func (cmd *batchCommandGet) executeSingle(client clientIfc) Error {
+func (cmd *batchCommandGet) executeSingle(client *Client) Error {
 	for _, offset := range cmd.batch.offsets {
 		var err Error
 		if len(cmd.ops) > 0 {
@@ -231,7 +238,7 @@ func (cmd *batchCommandGet) executeSingle(client clientIfc) Error {
 					return newError(types.PARAMETER_ERROR, "Write operations not allowed in batch read").setNode(cmd.node)
 				}
 			}
-			cmd.records[offset], err = client.operate(cmd.policy.toWritePolicy(), cmd.keys[offset], true, cmd.ops...)
+			cmd.records[offset], err = client.Operate(cmd.policy.toWritePolicy(), cmd.keys[offset], cmd.ops...)
 		} else if (cmd.readAttr & _INFO1_NOBINDATA) == _INFO1_NOBINDATA {
 			cmd.records[offset], err = client.GetHeader(&cmd.policy.BasePolicy, cmd.keys[offset])
 		} else {

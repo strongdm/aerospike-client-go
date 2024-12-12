@@ -15,18 +15,17 @@
 package aerospike
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	grpc "google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
+
+// Specifies if stack traces should be included in the error.
+var StackTracesEnabled = false
 
 // Error is the internal error interface for the Aerospike client's errors.
 // All the public API return this error type. This interface is compatible
@@ -145,70 +144,7 @@ func newCommonError(e error, messages ...string) Error {
 	return ne
 }
 
-func newGrpcError(isWrite bool, e error, messages ...string) Error {
-	if ae, ok := e.(Error); ok && ae.resultCode() == types.GRPC_ERROR {
-		return ae
-	}
-
-	// convert error to Aerospike errors
-	if e == context.DeadlineExceeded {
-		return ErrNetTimeout.err().markInDoubt(isWrite)
-	} else if e == grpc.ErrClientConnTimeout {
-		return ErrNetTimeout.err().markInDoubt(isWrite)
-	} else if e == grpc.ErrServerStopped {
-		return ErrServerNotAvailable.err().markInDoubt(isWrite)
-	}
-
-	// try to convert the error
-	code := status.Code(e)
-	if code == codes.Unknown {
-		if s := status.Convert(e); s != nil {
-			code = s.Code()
-		}
-	}
-
-	switch code {
-	case codes.OK:
-		return nil
-	case codes.Canceled:
-		return ErrNetTimeout.err().markInDoubt(isWrite)
-	case codes.InvalidArgument:
-		return newError(types.PARAMETER_ERROR, messages...)
-	case codes.DeadlineExceeded:
-		return ErrNetTimeout.err().markInDoubt(isWrite)
-	case codes.NotFound:
-		return newError(types.SERVER_NOT_AVAILABLE, messages...).markInDoubt(isWrite)
-	case codes.PermissionDenied:
-		return newError(types.FAIL_FORBIDDEN, messages...)
-	case codes.ResourceExhausted:
-		return newError(types.QUOTA_EXCEEDED, messages...)
-	case codes.FailedPrecondition:
-		return newError(types.PARAMETER_ERROR, messages...)
-	case codes.Aborted:
-		return newError(types.SERVER_ERROR).markInDoubt(isWrite)
-	case codes.OutOfRange:
-		return newError(types.PARAMETER_ERROR, messages...)
-	case codes.Unimplemented:
-		return newError(types.SERVER_NOT_AVAILABLE, messages...)
-	case codes.Internal:
-		return newError(types.SERVER_ERROR, messages...).markInDoubt(isWrite)
-	case codes.Unavailable:
-		return newError(types.SERVER_NOT_AVAILABLE, messages...).markInDoubt(isWrite)
-	case codes.DataLoss:
-		return ErrNetwork.err().markInDoubt(isWrite)
-	case codes.Unauthenticated:
-		return newError(types.NOT_AUTHENTICATED, messages...)
-
-	case codes.AlreadyExists:
-	case codes.Unknown:
-	}
-
-	ne := newError(types.GRPC_ERROR, messages...).markInDoubt(isWrite)
-	ne.wrap(e)
-	return ne
-}
-
-// SetInDoubt sets whether it is possible that the write transaction may have completed
+// SetInDoubt sets whether it is possible that the write command may have completed
 // even though this error was generated.  This may be the case when a
 // client error occurs (like timeout) after the command was sent to the server.
 func (ase *AerospikeError) setInDoubt(isRead bool, commandSentCounter int) Error {
@@ -455,8 +391,6 @@ var (
 	ErrMaxRetriesExceeded              = newConstError(types.MAX_RETRIES_EXCEEDED, "command execution timed out on client: Exceeded number of retries. See `Policy.MaxRetries`.")
 	ErrInvalidParam                    = newConstError(types.PARAMETER_ERROR)
 	ErrLuaPoolEmpty                    = newConstError(types.COMMON_ERROR, "Error fetching a lua instance from pool")
-
-	errGRPCStreamEnd = newError(types.OK, "GRPC Steam was ended successfully")
 )
 
 //revive:enable
@@ -505,24 +439,26 @@ func (st *stackFrame) String() string {
 }
 
 func stackTrace(err Error) []stackFrame {
-	const maxDepth = 10
-	sFrames := make([]stackFrame, 0, maxDepth)
-	for i := 3; i <= maxDepth+3; i++ {
-		pc, fl, ln, ok := runtime.Caller(i)
-		if !ok {
-			break
+	if StackTracesEnabled {
+		const maxDepth = 10
+		sFrames := make([]stackFrame, 0, maxDepth)
+		for i := 3; i <= maxDepth+3; i++ {
+			pc, fl, ln, ok := runtime.Caller(i)
+			if !ok {
+				break
+			}
+			fn := runtime.FuncForPC(pc)
+			sFrame := stackFrame{
+				fl: fl,
+				fn: fn.Name(),
+				ln: ln,
+			}
+			sFrames = append(sFrames, sFrame)
 		}
-		fn := runtime.FuncForPC(pc)
-		sFrame := stackFrame{
-			fl: fl,
-			fn: fn.Name(),
-			ln: ln,
-		}
-		sFrames = append(sFrames, sFrame)
-	}
 
-	if len(sFrames) > 0 {
-		return sFrames
+		if len(sFrames) > 0 {
+			return sFrames
+		}
 	}
 	return nil
 }

@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 // if this file is included in the build, it will include this method
@@ -33,28 +33,27 @@ func init() {
 }
 
 func parseObject(
-	cmd *readCommand,
+	brc *baseReadCommand,
 	opCount int,
 	fieldCount int,
 	generation uint32,
 	expiration uint32,
 ) Error {
-	receiveOffset := 0
 
 	// There can be fields in the response (setname etc).
 	// But for now, ignore them. Expose them to the API if needed in the future.
-	//logger.Logger.Debug("field count: %d, databuffer: %v", fieldCount, cmd.dataBuffer)
+	//logger.Logger.Debug("field count: %d, databuffer: %v", fieldCount, bufx.dataBuffer)
 	if fieldCount > 0 {
 		// Just skip over all the fields
 		for i := 0; i < fieldCount; i++ {
 			//logger.Logger.Debug("%d", receiveOffset)
-			fieldSize := int(Buffer.BytesToUint32(cmd.dataBuffer, receiveOffset))
-			receiveOffset += (4 + fieldSize)
+			fieldSize := int(Buffer.BytesToUint32(brc.dataBuffer, brc.dataOffset))
+			brc.dataOffset += (4 + fieldSize)
 		}
 	}
 
 	if opCount > 0 {
-		rv := *cmd.object
+		rv := *brc.object
 
 		if rv.Kind() != reflect.Ptr {
 			return ErrInvalidObjectType.err()
@@ -78,19 +77,19 @@ func parseObject(
 		}
 
 		for i := 0; i < opCount; i++ {
-			opSize := int(Buffer.BytesToUint32(cmd.dataBuffer, receiveOffset))
-			particleType := int(cmd.dataBuffer[receiveOffset+5])
-			nameSize := int(cmd.dataBuffer[receiveOffset+7])
-			name := string(cmd.dataBuffer[receiveOffset+8 : receiveOffset+8+nameSize])
-			receiveOffset += 4 + 4 + nameSize
+			opSize := int(Buffer.BytesToUint32(brc.dataBuffer, brc.dataOffset))
+			particleType := int(brc.dataBuffer[brc.dataOffset+5])
+			nameSize := int(brc.dataBuffer[brc.dataOffset+7])
+			name := string(brc.dataBuffer[brc.dataOffset+8 : brc.dataOffset+8+nameSize])
+			brc.dataOffset += 4 + 4 + nameSize
 
 			particleBytesSize := opSize - (4 + nameSize)
-			value, _ := bytesToParticle(particleType, cmd.dataBuffer, receiveOffset, particleBytesSize)
+			value, _ := bytesToParticle(particleType, brc.dataBuffer, brc.dataOffset, particleBytesSize)
 			if err := setObjectField(mappings, iobj, name, value); err != nil {
 				return err
 			}
 
-			receiveOffset += particleBytesSize
+			brc.dataOffset += particleBytesSize
 		}
 	}
 

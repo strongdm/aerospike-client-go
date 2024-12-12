@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 // PartitionFilter is used in scan/queries. This filter is also used as a cursor.

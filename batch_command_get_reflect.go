@@ -19,7 +19,7 @@ package aerospike
 import (
 	"reflect"
 
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 // if this file is included in the build, it will include this method
@@ -28,7 +28,7 @@ func init() {
 }
 
 func parseBatchObject(
-	cmd batchObjectParsetIfc,
+	cmd batchObjectParserIfc,
 	offset int,
 	opCount int,
 	fieldCount int,

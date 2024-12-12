@@ -17,8 +17,8 @@ package aerospike
 import (
 	"fmt"
 
-	"github.com/aerospike/aerospike-client-go/v7/logger"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/logger"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 type bufferedConn struct {
@@ -115,10 +115,6 @@ func (bc *bufferedConn) read(length int) ([]byte, Error) {
 }
 
 func (bc *bufferedConn) drainConn() Error {
-	if bc.conn.grpcReader != nil {
-		return nil
-	}
-
 	if !bc.conn.IsConnected() {
 		return nil
 	}

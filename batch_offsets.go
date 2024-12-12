@@ -1,4 +1,4 @@
-// Copyright 2014-2022 Aerospike, Inc.
+// Copyright 2014-2024 Aerospike, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,28 @@
 
 package aerospike
 
-// ClientType determines the type of client to build.
-type ClientType int
+type BatchOffsets interface {
+	size() int
+	get(int) int
+}
 
-const (
-	// CTNative means: Create a native client.
-	CTNative ClientType = iota
+// enforce the interface
+var _ BatchOffsets = &batchOffsetsNative{}
 
-	// CTProxy means: Create a proxy client.
-	CTProxy
-)
+type batchOffsetsNative struct {
+	offsets []int
+}
+
+func newBatchOffsetsNative(batch *batchNode) *batchOffsetsNative {
+	return &batchOffsetsNative{
+		offsets: batch.offsets,
+	}
+}
+
+func (bon *batchOffsetsNative) size() int {
+	return len(bon.offsets)
+}
+
+func (bon *batchOffsetsNative) get(i int) int {
+	return bon.offsets[i]
+}

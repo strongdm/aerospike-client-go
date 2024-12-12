@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -82,16 +82,6 @@ var _ = gg.Describe("UDF/Query tests", func() {
 	const keyCount = 1000
 	bin1 := as.NewBin("bin1", rand.Intn(math.MaxInt16))
 	bin2 := as.NewBin("bin2", 1)
-
-	gg.BeforeEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-
-		if *proxy {
-			gg.Skip("Not supported in proxy environment")
-		}
-	})
 
 	gg.It("must Register a UDF", func() {
 		regTask, err := client.RegisterUDF(wpolicy, []byte(udfBody), "udf1.lua", as.LUA)

@@ -26,7 +26,7 @@ type BatchPolicy struct {
 	//
 	// Values:
 	// 1: Issue batch requests sequentially.  This mode has a performance advantage for small
-	// to medium sized batch sizes because requests can be issued in the main transaction goroutine.
+	// to medium sized batch sizes because requests can be issued in the main command goroutine.
 	// This is the default.
 	// 0: Issue all batch requests in concurrent goroutines.  This mode has a performance
 	// advantage for extremely large batch sizes because each node can process the request
@@ -40,7 +40,7 @@ type BatchPolicy struct {
 
 	// Allow batch to be processed immediately in the server's receiving thread when the server
 	// deems it to be appropriate.  If false, the batch will always be processed in separate
-	// transaction goroutines.  This field is only relevant for the new batch index protocol.
+	// command goroutines.  This field is only relevant for the new batch index protocol.
 	//
 	// For batch exists or batch reads of smaller sized records (<= 1K per record), inline
 	// processing will be significantly faster on "in memory" namespaces.  The server disables

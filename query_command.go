@@ -48,7 +48,7 @@ func (cmd *queryCommand) parseResult(ifc command, conn *Connection) Error {
 	return cmd.baseMultiCommand.parseResult(ifc, conn)
 }
 
-func (cmd *queryCommand) transactionType() transactionType {
+func (cmd *queryCommand) commandType() commandType {
 	return ttQuery
 }
 

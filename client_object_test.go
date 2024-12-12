@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -30,12 +30,6 @@ import (
 // ALL tests are isolated by SetName and Key, which are 50 random characters
 var _ = gg.Describe("Aerospike", func() {
 	var nsup int
-
-	gg.BeforeEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-	})
 
 	for _, useBoolType := range []bool{false, true} {
 
@@ -945,10 +939,6 @@ var _ = gg.Describe("Aerospike", func() {
 					gm.Expect(resObj.TTL1).NotTo(gm.Equal(uint32(0)))
 					gm.Expect(resObj.TTL1).To(gm.Equal(resObj.TTL2))
 
-					if *dbaas {
-						gg.Skip("Not supported in DBAAS environment")
-					}
-
 					defaultTTL, nerr := strconv.Atoi(nsInfo(ns, "default-ttl"))
 					gm.Expect(nerr).ToNot(gm.HaveOccurred())
 
@@ -1100,12 +1090,6 @@ var _ = gg.Describe("Aerospike", func() {
 			}) // ScanObjects context
 
 			gg.Context("UDF Objects operations", func() {
-				gg.BeforeEach(func() {
-					if *dbaas {
-						gg.Skip("Not supported in DBAAS environment")
-					}
-				})
-
 				gg.It("must store and get values of types which implement Value interface using udf", func() {
 					udfFunc := `function setValue(rec, val)
 					rec['value'] = val
@@ -1339,10 +1323,6 @@ var _ = gg.Describe("Aerospike", func() {
 				})
 
 				gg.It("must query only relevant objects with the most complex structure possible", func() {
-					if *dbaas {
-						gg.Skip("Not supported in DBAAS environment")
-					}
-
 					// first create an index
 					createIndex(nil, ns, set, set+"inner1", "inner1", as.NUMERIC)
 					defer dropIndex(nil, ns, set, set+"inner1")
@@ -1381,10 +1361,6 @@ var _ = gg.Describe("Aerospike", func() {
 				})
 
 				gg.It("must query only relevant objects, and close and return", func() {
-					if *dbaas {
-						gg.Skip("Not supported in DBAAS environment")
-					}
-
 					// first create an index
 					createIndex(nil, ns, set, set+"inner1", "inner1", as.NUMERIC)
 					defer dropIndex(nil, ns, set, set+"inner1")

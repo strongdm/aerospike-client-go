@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	ast "github.com/aerospike/aerospike-client-go/v7/types"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	ast "github.com/aerospike/aerospike-client-go/v8/types"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -41,19 +41,11 @@ var _ = gg.Describe("Expression Filters", func() {
 		const keyCount = 1000
 
 		gg.AfterAll(func() {
-			if *dbaas {
-				gg.Skip("Not supported in DBAAS environment")
-			}
-
 			dropIndex(nil, ns, set, "intval")
 			dropIndex(nil, ns, set, "strval")
 		})
 
 		gg.BeforeAll(func() {
-			if *dbaas {
-				gg.Skip("Not supported in DBAAS environment")
-			}
-
 			dropIndex(nil, ns, set, "intval")
 			dropIndex(nil, ns, set, "strval")
 
@@ -508,10 +500,6 @@ var _ = gg.Describe("Expression Filters", func() {
 		var _ = gg.Context("Record Ops", func() {
 
 			gg.It("ExpRecordSize must work", func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				if serverIsOlderThan("7") {
 					gg.Skip("Not supported servers before v7")
 				}
@@ -540,10 +528,6 @@ var _ = gg.Describe("Expression Filters", func() {
 			})
 
 			gg.It("ExpMemorySize must work", func() {
-				if *dbaas {
-					gg.Skip("Not supported in DBAAS environment")
-				}
-
 				if len(nsInfo(ns, "device_total_bytes")) > 0 {
 					gg.Skip("Skipping ExpDeviceSize test since the namespace is persisted and the test works only for Memory-Only namespaces.")
 				}

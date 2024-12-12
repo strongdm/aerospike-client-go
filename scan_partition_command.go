@@ -14,7 +14,7 @@
 
 package aerospike
 
-import "github.com/aerospike/aerospike-client-go/v7/types"
+import "github.com/aerospike/aerospike-client-go/v8/types"
 
 type scanPartitionCommand struct {
 	baseMultiCommand
@@ -62,7 +62,7 @@ func (cmd *scanPartitionCommand) shouldRetry(e Error) bool {
 	return cmd.tracker != nil && cmd.tracker.shouldRetry(cmd.nodePartitions, e)
 }
 
-func (cmd *scanPartitionCommand) transactionType() transactionType {
+func (cmd *scanPartitionCommand) commandType() commandType {
 	return ttScan
 }
 

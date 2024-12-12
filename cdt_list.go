@@ -310,18 +310,15 @@ func packCDTIfcVarParamsAsArray(packer BufferEx, opType int16, ctx []*CDTContext
 		}
 		size += n
 	} else {
-		n, err = packShortRaw(packer, opType)
-		if err != nil {
-			return n, err
+		if n, err = packArrayBegin(packer, len(params)+1); err != nil {
+			return size + n, err
 		}
 		size += n
 
-		if len(params) > 0 {
-			if n, err = packArrayBegin(packer, len(params)); err != nil {
-				return size + n, err
-			}
-			size += n
+		if n, err = packObject(packer, opType, false); err != nil {
+			return size + n, err
 		}
+		size += n
 	}
 
 	if len(params) > 0 {
@@ -587,7 +584,6 @@ func ListRemoveByValueListOp(binName string, values []interface{}, returnType Li
 // If valueEnd is nil, the range is greater than equal to valueBegin.
 // Server returns removed data specified by returnType
 func ListRemoveByValueRangeOp(binName string, returnType ListReturnType, valueBegin, valueEnd interface{}, ctx ...*CDTContext) *Operation {
-	// TODO: Inconsistent parameter order
 	if valueEnd == nil {
 		return &Operation{opType: _CDT_MODIFY, ctx: ctx, binName: binName, binValue: ListValue{_CDT_LIST_REMOVE_BY_VALUE_INTERVAL, IntegerValue(returnType), NewValue(valueBegin)}, encoder: listGenericOpEncoder}
 	}

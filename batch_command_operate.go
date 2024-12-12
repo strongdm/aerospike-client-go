@@ -17,8 +17,8 @@ package aerospike
 import (
 	"reflect"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchCommandOperate struct {
@@ -33,17 +33,17 @@ type batchCommandOperate struct {
 }
 
 func newBatchCommandOperate(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	records []BatchRecordIfc,
-) *batchCommandOperate {
+) batchCommandOperate {
 	var node *Node
 	if batch != nil {
 		node = batch.Node
 	}
 
-	res := &batchCommandOperate{
+	res := batchCommandOperate{
 		batchCommand: batchCommand{
 			client:           client,
 			baseMultiCommand: *newMultiCommand(node, nil, true),
@@ -52,6 +52,8 @@ func newBatchCommandOperate(
 		},
 		records: records,
 	}
+	res.txn = policy.Txn
+
 	return res
 }
 
@@ -105,7 +107,7 @@ func (cmd *batchCommandOperate) parseRecordResults(ifc command, receiveSize int)
 		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
 		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
 
-		err := cmd.skipKey(fieldCount)
+		err := cmd.parseFieldsBatch(resultCode, fieldCount, cmd.records[batchIndex])
 		if err != nil {
 			return false, err
 		}
@@ -117,7 +119,7 @@ func (cmd *batchCommandOperate) parseRecordResults(ifc command, receiveSize int)
 
 			// If it looks like the error is on the first record and the message is marked as last part,
 			// the error is for the whole command and not just for the first batchIndex
-			lastMessage := (info3&_INFO3_LAST) == _INFO3_LAST || cmd.grpcEOS
+			lastMessage := (info3 & _INFO3_LAST) == _INFO3_LAST
 			if resultCode != 0 && lastMessage && receiveSize == int(_MSG_REMAINING_HEADER_SIZE) {
 				return false, newError(resultCode).setNode(cmd.node)
 			}
@@ -130,7 +132,7 @@ func (cmd *batchCommandOperate) parseRecordResults(ifc command, receiveSize int)
 				}
 
 				// for UDF failures
-				var msg interface{}
+				var msg any
 				if rec != nil {
 					msg = rec.Bins["FAILURE"]
 				}
@@ -160,9 +162,7 @@ func (cmd *batchCommandOperate) parseRecordResults(ifc command, receiveSize int)
 			continue
 		}
 
-		// Do not process records after grpc stream has ended.
-		// This is a special case due to proxy server shortcomings.
-		if resultCode == 0 && !cmd.grpcEOS {
+		if resultCode == 0 {
 			if cmd.objects == nil {
 				rec, err := cmd.parseRecord(cmd.records[batchIndex].key(), opCount, generation, expiration)
 				if err != nil {
@@ -229,7 +229,7 @@ func (cmd *batchCommandOperate) parseRecord(key *Key, opCount int, generation, e
 	return newRecord(cmd.node, key, bins, generation, expiration), nil
 }
 
-func (cmd *batchCommandOperate) executeSingle(client clientIfc) Error {
+func (cmd *batchCommandOperate) executeSingle(client *Client) Error {
 	var res *Record
 	var err Error
 	for _, br := range cmd.records {
@@ -246,14 +246,14 @@ func (cmd *batchCommandOperate) executeSingle(client clientIfc) Error {
 			} else if len(ops) == 0 {
 				ops = append(ops, GetOp())
 			}
-			res, err = client.operate(cmd.client.getUsableBatchReadPolicy(br.Policy).toWritePolicy(cmd.policy), br.Key, true, ops...)
+			res, err = client.Operate(cmd.client.getUsableBatchReadPolicy(br.Policy).toWritePolicy(cmd.policy), br.Key, ops...)
 		case *BatchWrite:
 			policy := cmd.client.getUsableBatchWritePolicy(br.Policy).toWritePolicy(cmd.policy)
 			policy.RespondPerEachOp = true
-			res, err = client.operate(policy, br.Key, true, br.Ops...)
+			res, err = client.Operate(policy, br.Key, br.Ops...)
 		case *BatchDelete:
 			policy := cmd.client.getUsableBatchDeletePolicy(br.Policy).toWritePolicy(cmd.policy)
-			res, err = client.operate(policy, br.Key, true, DeleteOp())
+			res, err = client.Operate(policy, br.Key, DeleteOp())
 		case *BatchUDF:
 			policy := cmd.client.getUsableBatchUDFPolicy(br.Policy).toWritePolicy(cmd.policy)
 			policy.RespondPerEachOp = true
@@ -291,7 +291,7 @@ func (cmd *batchCommandOperate) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *batchCommandOperate) transactionType() transactionType {
+func (cmd *batchCommandOperate) commandType() commandType {
 	if cmd.isRead() {
 		return ttBatchRead
 	}

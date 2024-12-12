@@ -9,7 +9,7 @@ profile: cover_all.out
 
 # (optional; but recommended to set)
 # When specified reported file paths will not contain local prefix in the output
-local-prefix: "github.com/aerospike/aerospike-client-go/v7"
+local-prefix: "github.com/aerospike/aerospike-client-go/v8"
 
 # Holds coverage thresholds percentages, values should be in range [0-100]
 threshold:
@@ -55,11 +55,6 @@ exclude:
     - record_exists_action.go
     - replica_policy.go
     - generics.go
-    - proxy_auth_interceptor.go
-    - proxy_client.go
-    - proxy_client_reflect.go
-    - proxy_query_partition_command.go
-    - proxy_scan_command.go
     - login_command.go
     - types/histogram/histogram.go
     - types/rand/xor_shift128.go

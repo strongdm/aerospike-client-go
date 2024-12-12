@@ -19,19 +19,14 @@ type FieldType int
 
 // FieldType constants used in the Aerospike Wire Protocol.
 const (
-	NAMESPACE FieldType = 0
-	TABLE     FieldType = 1
-	KEY       FieldType = 2
-
-	//BIN FieldType = 3;
-
-	DIGEST_RIPE FieldType = 4
-
-	//GU_TID FieldType = 5;
-
-	DIGEST_RIPE_ARRAY    FieldType = 6
-	TRAN_ID              FieldType = 7 // user supplied transaction id, which is simply passed back
-	SCAN_OPTIONS         FieldType = 8
+	NAMESPACE            FieldType = 0
+	TABLE                FieldType = 1
+	KEY                  FieldType = 2
+	RECORD_VERSION       FieldType = 3
+	DIGEST_RIPE          FieldType = 4
+	MRT_ID               FieldType = 5
+	MRT_DEADLINE         FieldType = 6
+	QUERY_ID             FieldType = 7
 	SOCKET_TIMEOUT       FieldType = 9
 	RECORDS_PER_SECOND   FieldType = 10
 	PID_ARRAY            FieldType = 11

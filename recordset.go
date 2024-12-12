@@ -21,7 +21,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/aerospike/aerospike-client-go/v7/internal/atomic"
+	"github.com/aerospike/aerospike-client-go/v8/internal/atomic"
 )
 
 // Result is the value returned by Recordset's Results() function.

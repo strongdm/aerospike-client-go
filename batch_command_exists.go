@@ -15,8 +15,8 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchCommandExists struct {
@@ -27,7 +27,7 @@ type batchCommandExists struct {
 }
 
 func newBatchCommandExists(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	keys []*Key,
@@ -60,6 +60,10 @@ func (cmd *batchCommandExists) cloneBatchCommand(batch *batchNode) batcher {
 }
 
 func (cmd *batchCommandExists) writeBuffer(ifc command) Error {
+	if cmd.batch.Node.SupportsBatchAny() {
+		attr := newBatchAttr(cmd.policy, _INFO1_READ|_INFO1_NOBINDATA)
+		return cmd.setBatchOperate(cmd.policy, cmd.keys, cmd.batch, nil, nil, attr)
+	}
 	return cmd.setBatchRead(cmd.policy, cmd.keys, cmd.batch, nil, nil, _INFO1_READ|_INFO1_NOBINDATA)
 }
 
@@ -75,6 +79,17 @@ func (cmd *batchCommandExists) parseRecordResults(ifc command, receiveSize int) 
 		}
 
 		resultCode := types.ResultCode(cmd.dataBuffer[5] & 0xFF)
+		// generation := Buffer.BytesToUint32(cmd.dataBuffer, 6)
+		// expiration := types.TTL(Buffer.BytesToUint32(cmd.dataBuffer, 10))
+		batchIndex := int(Buffer.BytesToUint32(cmd.dataBuffer, 14))
+		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
+		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
+		if len(cmd.keys) > batchIndex {
+			err := cmd.parseFieldsRead(fieldCount, cmd.keys[batchIndex])
+			if err != nil {
+				return false, err
+			}
+		}
 
 		// The only valid server return codes are "ok" and "not found".
 		// If other return codes are received, then abort the batch.
@@ -93,17 +108,15 @@ func (cmd *batchCommandExists) parseRecordResults(ifc command, receiveSize int) 
 			return false, nil
 		}
 
-		batchIndex := int(Buffer.BytesToUint32(cmd.dataBuffer, 14))
-		fieldCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 18))
-		opCount := int(Buffer.BytesToUint16(cmd.dataBuffer, 20))
-
 		if opCount > 0 {
 			return false, newCustomNodeError(cmd.node, types.PARSE_ERROR, "Received bins that were not requested!")
 		}
 
-		err := cmd.skipKey(fieldCount)
-		if err != nil {
-			return false, err
+		if len(cmd.keys) > batchIndex {
+			err := cmd.parseFieldsRead(fieldCount, cmd.keys[batchIndex])
+			if err != nil {
+				return false, err
+			}
 		}
 
 		// only set the results to true; as a result, no synchronization is needed
@@ -112,11 +125,11 @@ func (cmd *batchCommandExists) parseRecordResults(ifc command, receiveSize int) 
 	return true, nil
 }
 
-func (cmd *batchCommandExists) transactionType() transactionType {
+func (cmd *batchCommandExists) commandType() commandType {
 	return ttBatchRead
 }
 
-func (cmd *batchCommandExists) executeSingle(client clientIfc) Error {
+func (cmd *batchCommandExists) executeSingle(client *Client) Error {
 	var err Error
 	for _, offset := range cmd.batch.offsets {
 		cmd.existsArray[offset], err = client.Exists(&cmd.policy.BasePolicy, cmd.keys[offset])

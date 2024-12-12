@@ -15,7 +15,7 @@
 package aerospike_test
 
 import (
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -36,10 +36,6 @@ var _ = gg.Describe("Query operations with Context", func() {
 	var keys map[string]*as.Key
 
 	gg.BeforeEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-
 		keys = make(map[string]*as.Key, keyCount)
 		set = randString(50)
 		for i := 0; i < keyCount; i++ {

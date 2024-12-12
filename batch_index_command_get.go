@@ -15,37 +15,32 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 type batchIndexCommandGet struct {
-	batchCommandGet
+	batchCommandOperate
+
+	indexRecords []*BatchRead
 }
 
 func newBatchIndexCommandGet(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	records []*BatchRead,
 	isOperation bool,
-) *batchIndexCommandGet {
-	var node *Node
-	if batch != nil {
-		node = batch.Node
+) batchIndexCommandGet {
+	recIfcs := make([]BatchRecordIfc, len(records))
+	for i := range records {
+		recIfcs[i] = records[i]
 	}
 
-	res := &batchIndexCommandGet{
-		batchCommandGet{
-			batchCommand: batchCommand{
-				client:           client,
-				baseMultiCommand: *newMultiCommand(node, nil, isOperation),
-				policy:           policy,
-				batch:            batch,
-			},
-			records:      nil,
-			indexRecords: records,
-		},
+	res := batchIndexCommandGet{
+		batchCommandOperate: newBatchCommandOperate(client, batch, policy, recIfcs),
+		indexRecords:        records,
 	}
+	res.txn = policy.Txn
 	return res
 }
 
@@ -57,10 +52,6 @@ func (cmd *batchIndexCommandGet) cloneBatchCommand(batch *batchNode) batcher {
 	return &res
 }
 
-func (cmd *batchIndexCommandGet) writeBuffer(ifc command) Error {
-	return cmd.setBatchIndexRead(cmd.policy, cmd.indexRecords, cmd.batch)
-}
-
 func (cmd *batchIndexCommandGet) Execute() Error {
 	if len(cmd.batch.offsets) == 1 {
 		return cmd.executeSingle(cmd.client)
@@ -68,8 +59,8 @@ func (cmd *batchIndexCommandGet) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *batchIndexCommandGet) executeSingle(client clientIfc) Error {
-	for i, br := range cmd.indexRecords {
+func (cmd *batchIndexCommandGet) executeSingle(client *Client) Error {
+	for _, br := range cmd.indexRecords {
 		var ops []*Operation
 		if br.headerOnly() {
 			ops = []*Operation{GetHeaderOp()}
@@ -77,13 +68,15 @@ func (cmd *batchIndexCommandGet) executeSingle(client clientIfc) Error {
 			for i := range br.BinNames {
 				ops = append(ops, GetBinOp(br.BinNames[i]))
 			}
-		} else {
+		} else if len(br.Ops) > 0 {
 			ops = br.Ops
+		} else {
+			ops = []*Operation{GetOp()}
 		}
-		res, err := client.operate(cmd.policy.toWritePolicy(), br.Key, true, ops...)
-		cmd.indexRecords[i].setRecord(res)
+		res, err := client.Operate(cmd.policy.toWritePolicy(), br.Key, ops...)
+		br.setRecord(res)
 		if err != nil {
-			cmd.indexRecords[i].setRawError(err)
+			br.setRawError(err)
 
 			// Key not found is NOT an error for batch requests
 			if err.resultCode() == types.KEY_NOT_FOUND_ERROR {
@@ -102,8 +95,4 @@ func (cmd *batchIndexCommandGet) executeSingle(client clientIfc) Error {
 		}
 	}
 	return nil
-}
-
-func (cmd *batchIndexCommandGet) generateBatchNodes(cluster *Cluster) ([]*batchNode, Error) {
-	return newBatchNodeListRecords(cluster, cmd.policy, cmd.indexRecords, cmd.sequenceAP, cmd.sequenceSC, cmd.batch)
 }

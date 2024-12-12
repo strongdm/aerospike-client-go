@@ -17,7 +17,7 @@ package aerospike_test
 import (
 	"fmt"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -44,19 +44,12 @@ var _ = gg.Describe("Geo Spacial Tests", gg.Ordered, func() {
 	var binName = "GeoBin"
 
 	gg.BeforeAll(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
 		// queries only work on indices
 		dropIndex(wpolicy, ns, set, set+binName)
 		createIndex(wpolicy, ns, set, set+binName, binName, as.GEO2DSPHERE)
 	})
 
 	gg.AfterAll(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-
 		dropIndex(wpolicy, ns, set, set+binName)
 	})
 

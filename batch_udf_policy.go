@@ -22,7 +22,7 @@ type BatchUDFPolicy struct {
 	// Default: nil
 	FilterExpression *Expression
 
-	// Desired consistency guarantee when committing a transaction on the server. The default
+	// Desired consistency guarantee when committing a command on the server. The default
 	// (COMMIT_ALL) indicates that the server should wait for master and all replica commits to
 	// be successful before returning success to the client.
 	//
@@ -38,7 +38,7 @@ type BatchUDFPolicy struct {
 	// > 0: Actual expiration in seconds.
 	Expiration uint32
 
-	// DurableDelete leaves a tombstone for the record if the transaction results in a record deletion.
+	// DurableDelete leaves a tombstone for the record if the command results in a record deletion.
 	// This prevents deleted records from reappearing after node failures.
 	// Valid for Aerospike Server Enterprise Edition 3.10+ only.
 	DurableDelete bool

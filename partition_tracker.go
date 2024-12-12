@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	atmc "github.com/aerospike/aerospike-client-go/v7/internal/atomic"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	atmc "github.com/aerospike/aerospike-client-go/v8/internal/atomic"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 type partitionTracker struct {
@@ -273,10 +273,7 @@ func (pt *partitionTracker) setDigest(nodePartitions *nodePartitions, key *Key) 
 	partitionId := key.PartitionId()
 	pt.partitions[partitionId-pt.partitionBegin].Digest = key.Digest()
 
-	// nodePartitions is nil in Proxy client
-	if nodePartitions != nil {
-		nodePartitions.recordCount++
-	}
+	nodePartitions.recordCount++
 }
 
 func (pt *partitionTracker) setLast(nodePartitions *nodePartitions, key *Key, bval *int64) {
@@ -290,10 +287,7 @@ func (pt *partitionTracker) setLast(nodePartitions *nodePartitions, key *Key, bv
 		ps.BVal = *bval
 	}
 
-	// nodePartitions is nil in Proxy client
-	if nodePartitions != nil {
-		nodePartitions.recordCount++
-	}
+	nodePartitions.recordCount++
 }
 
 func (pt *partitionTracker) allowRecord(np *nodePartitions) bool {

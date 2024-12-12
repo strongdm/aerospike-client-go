@@ -16,10 +16,11 @@ package aerospike
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 
-	"github.com/aerospike/aerospike-client-go/v7/pkg/ripemd160"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/pkg/ripemd160"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 type keyWriter struct {
@@ -150,6 +151,5 @@ func (vb *keyWriter) writeKey(val Value) Error {
 		return nil
 	}
 
-	// TODO: Replace the error message with fmt.Sprintf("Key Generation Error. Value type not supported: %T", val)
-	return newError(types.PARAMETER_ERROR, "Key Generation Error. Value not supported: "+val.String())
+	return newError(types.PARAMETER_ERROR, fmt.Sprintf("Key Generation Error. Value type not supported: %T", val))
 }

@@ -9,7 +9,7 @@ binmap
 
 ## BinMap
 
-BinMap is a type defined as map[string]interface{} to facilitate declaring bin data.
+BinMap is a type defined as map[string]any to facilitate declaring bin data.
 
 ```go
   bins := BinMap{
@@ -31,7 +31,7 @@ record
 A record is how the data is represented and stored in the database. A record is represented as a `struct`.
 
 Fields are:
-- `Bins` — Bins and their values are represented as a BinMap (map[string]interface{})
+- `Bins` — Bins and their values are represented as a BinMap (map[string]any)
 - `Key` — Associated Key pointer
 - `Node` — Database node from which the record was retrieved from.
 - `Expiration` — TimeToLive of the record in seconds. Shows in how many seconds the data will be erased if not updated.
@@ -57,7 +57,7 @@ Simple example of a Read, Change, Update operation:
   bins := BinMap{
     "bin1": 42, // you can pass any supported type as bin value
     "bin2": "An elephant is a mouse with an operating system",
-    "bin3": []interface{}{"Go", 2009},
+    "bin3": []any{"Go", 2009},
   }
 
   // write the bins
@@ -122,7 +122,7 @@ key
 -->
 <a name="key"></a>
 
-## NewKey(ns, set string, key interface{})
+## NewKey(ns, set string, key any)
 
 A record is addressable via its key. A key is a struct containing:
 
@@ -144,7 +144,7 @@ bin
 -->
 <a name="bin"></a>
 
-## NewBin(name string, value interface{}) Value
+## NewBin(name string, value any) Value
 
 Bins are analogous to fields in relational databases.
 
@@ -157,7 +157,7 @@ Example:
   bin1 := NewBin("name", "Aerospike") // string value
   bin2 := NewBin("maxTPS", 1000000) // number value
   bin3 := NewBin("notes",
-    map[interface{}]interface{}{
+    map[any]any{
       "age": 5,
       666: "not allowed in",
       "clients": []string{"go", "c", "java", "python", "node", "erlang"},
@@ -219,7 +219,7 @@ filter
 -->
 <a name="filter"></a>
 
-## NewEqualFilter(binName string, value interface{}) *Filter
+## NewEqualFilter(binName string, value any) *Filter
 
 Create equality filter for query.
 

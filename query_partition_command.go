@@ -51,7 +51,7 @@ func (cmd *queryPartitionCommand) shouldRetry(e Error) bool {
 	return cmd.tracker != nil && cmd.tracker.shouldRetry(cmd.nodePartitions, e)
 }
 
-func (cmd *queryPartitionCommand) transactionType() transactionType {
+func (cmd *queryPartitionCommand) commandType() commandType {
 	return ttQuery
 }
 

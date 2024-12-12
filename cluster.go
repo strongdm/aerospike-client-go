@@ -24,11 +24,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	iatomic "github.com/aerospike/aerospike-client-go/v7/internal/atomic"
-	sm "github.com/aerospike/aerospike-client-go/v7/internal/atomic/map"
-	"github.com/aerospike/aerospike-client-go/v7/internal/seq"
-	"github.com/aerospike/aerospike-client-go/v7/logger"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	iatomic "github.com/aerospike/aerospike-client-go/v8/internal/atomic"
+	sm "github.com/aerospike/aerospike-client-go/v8/internal/atomic/map"
+	"github.com/aerospike/aerospike-client-go/v8/internal/seq"
+	"github.com/aerospike/aerospike-client-go/v8/logger"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 // Cluster encapsulates the aerospike cluster nodes and manages
@@ -980,7 +980,7 @@ func (clstr *Cluster) MetricsEnabled() bool {
 	return clstr.metricsEnabled.Load()
 }
 
-// EnableMetrics enables the cluster transaction metrics gathering.
+// EnableMetrics enables the cluster command metrics gathering.
 // If the parameters for the histogram in the policy are the different from the one already
 // on the cluster, the metrics will be reset.
 func (clstr *Cluster) EnableMetrics(policy *MetricsPolicy) {
@@ -1004,7 +1004,7 @@ func (clstr *Cluster) EnableMetrics(policy *MetricsPolicy) {
 	}
 }
 
-// DisableMetrics disables the cluster transaction metrics gathering.
+// DisableMetrics disables the cluster command metrics gathering.
 func (clstr *Cluster) DisableMetrics() {
 	clstr.metricsEnabled.Store(false)
 }

@@ -50,3 +50,50 @@ func (nd *Node) ConnsCount() int {
 func (nd *Node) CloseConnections() {
 	nd.closeConnections()
 }
+
+// PartitionForWrite returns a partition for write purposes
+func ConfiguredAsStrongConsistency(client *Client, namespace string) bool {
+	// Must copy hashmap reference for copy on write semantics to work.
+	pmap := client.cluster.getPartitions()
+	p := pmap[namespace]
+	if p == nil {
+		return false
+	}
+
+	return p.SCMode
+}
+
+func NewWriteCommand(
+	cluster *Cluster,
+	policy *WritePolicy,
+	key *Key,
+	bins []*Bin,
+	binMap BinMap) (writeCommand, Error) {
+	return newWriteCommand(
+		cluster,
+		policy,
+		key,
+		bins,
+		binMap,
+		_WRITE)
+}
+
+func (cmd *writeCommand) WriteBuffer(ifc command) Error {
+	return cmd.writeBuffer(ifc)
+}
+
+func (cmd *writeCommand) Buffer() []byte {
+	return cmd.dataBuffer[:cmd.dataOffset]
+}
+
+func NewDeleteCommand(cluster *Cluster, policy *WritePolicy, key *Key) (*deleteCommand, Error) {
+	return newDeleteCommand(cluster, policy, key)
+}
+
+func (cmd *deleteCommand) WriteBuffer(ifc command) Error {
+	return cmd.writeBuffer(ifc)
+}
+
+func (cmd *deleteCommand) Buffer() []byte {
+	return cmd.dataBuffer[:cmd.dataOffset]
+}

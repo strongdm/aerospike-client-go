@@ -14,7 +14,7 @@
 
 package aerospike
 
-import "github.com/aerospike/aerospike-client-go/v7/types"
+import "github.com/aerospike/aerospike-client-go/v8/types"
 
 var _ BatchRecordIfc = &BatchWrite{}
 
@@ -78,14 +78,14 @@ func (bw *BatchWrite) size(parentPolicy *BasePolicy) (int, Error) {
 			}
 		}
 
-		if bw.Policy.SendKey || parentPolicy.SendKey {
+		if (bw.Policy.SendKey || parentPolicy.SendKey) && bw.Key.hasValueToSend() {
 			if sz, err := bw.Key.userKey.EstimateSize(); err != nil {
 				return -1, err
 			} else {
 				size += sz + int(_FIELD_HEADER_SIZE) + 1
 			}
 		}
-	} else if parentPolicy.SendKey {
+	} else if parentPolicy.SendKey && bw.Key.hasValueToSend() {
 		sz, err := bw.Key.userKey.EstimateSize()
 		if err != nil {
 			return -1, err

@@ -17,8 +17,8 @@ package aerospike
 import (
 	"encoding/base64"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	ParticleType "github.com/aerospike/aerospike-client-go/v7/types/particle_type"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	ParticleType "github.com/aerospike/aerospike-client-go/v8/types/particle_type"
 )
 
 // ExpressionArgument is used for passing arguments to filter expressions.
@@ -478,13 +478,8 @@ func (fe *Expression) pack(buf BufferEx) (int, Error) {
 }
 
 func (fe *Expression) Base64() (string, Error) {
-	buf := fe.grpc()
-	return base64.StdEncoding.EncodeToString(buf), nil
-}
-
-func (fe *Expression) grpc() []byte {
 	if fe == nil {
-		return nil
+		return "", nil
 	}
 
 	sz, err := fe.size()
@@ -498,7 +493,7 @@ func (fe *Expression) grpc() []byte {
 		panic(err)
 	}
 
-	return buf.Bytes()
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
 // ExpFromBase64 creates an expression from an encoded base64 expression.
@@ -658,7 +653,6 @@ func ExpBinExists(name string) *Expression {
 //	LDT     = 21
 //	GEOJSON = 23
 func ExpBinType(name string) *Expression {
-	// TODO: Improve documentation and provide examples.
 	return newFilterExpression(
 		&expOpBIN_TYPE,
 		StringValue(name),

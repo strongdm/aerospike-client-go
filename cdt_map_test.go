@@ -20,7 +20,7 @@ import (
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
 const udfCDTTests = `
@@ -176,7 +176,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 			)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			gm.Expect(rec.Bins).To(gm.Equal(as.BinMap{"bin": []interface{}{[]interface{}{"v1.0", "v1.1"}, []interface{}{"v2.0", "v2.1"}}}))
+			gm.Expect(rec.Bins).To(gm.Equal(as.BinMap{"bin": as.OpResults{[]interface{}{"v1.0", "v1.1"}, []interface{}{"v2.0", "v2.1"}}}))
 
 			rec, err = client.Get(nil, key)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -193,7 +193,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 				as.GetBinOp(cdtBinName),
 			)
 			// gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtMap).NotTo(gm.Equal([]interface{}{1, 2, 3, 4, 4, 4, map[interface{}]interface{}{1: 1, 2: 2, 3: 3, 4: 4}}))
+			gm.Expect(cdtMap).NotTo(gm.Equal(as.OpResults{1, 2, 3, 4, 4, 4, map[interface{}]interface{}{1: 1, 2: 2, 3: 3, 4: 4}}))
 
 			cdtMap, err = client.Get(nil, key, cdtBinName)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -237,7 +237,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 			)
 
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtMap.Bins[cdtBinName]).To(gm.Equal([]interface{}{3, 4, 4, 4, "my default", "changed", []as.MapPair{{Key: 12, Value: 23}, {Key: 13, Value: "myval2"}}}))
+			gm.Expect(cdtMap.Bins[cdtBinName]).To(gm.Equal(as.OpResults{3, 4, 4, 4, "my default", "changed", []as.MapPair{{Key: 12, Value: 23}, {Key: 13, Value: "myval2"}}}))
 
 			cdtMap, err = client.Get(nil, key, cdtBinName)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -271,7 +271,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 			)
 
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: 3, "other_bin": []interface{}{nil, "head...tail"}})) // there were two operations for bin `other_bin`, so the results come back in an array
+			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: 3, "other_bin": as.OpResults{nil, "head...tail"}})) // there were two operations for bin `other_bin`, so the results come back in an array
 
 			// Should set SendKey == true for a solely read operation without getting PARAMETER_ERROR from the server
 			wpolicy2 := *wpolicy
@@ -297,12 +297,12 @@ var _ = gg.Describe("CDT Map Test", func() {
 			)
 
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[0]).To(gm.Equal(1))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[1]).To(gm.Equal(2))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[2]).To(gm.Equal(3))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[3]).To(gm.Equal(4))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[4]).To(gm.Equal([]as.MapPair{{Key: 3, Value: 2}}))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[5]).To(gm.ConsistOf([]as.MapPair{{Key: 1, Value: 4}, {Key: 2, Value: 3}, {Key: 3, Value: 2}, {Key: 4, Value: 1}}))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[0]).To(gm.Equal(1))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[1]).To(gm.Equal(2))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[2]).To(gm.Equal(3))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[3]).To(gm.Equal(4))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[4]).To(gm.Equal([]as.MapPair{{Key: 3, Value: 2}}))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[5]).To(gm.ConsistOf([]as.MapPair{{Key: 1, Value: 4}, {Key: 2, Value: 3}, {Key: 3, Value: 2}, {Key: 4, Value: 1}}))
 
 			cdtMap, err = client.Operate(wpolicy, key,
 				as.MapSetPolicyOp(as.NewMapPolicy(as.MapOrder.KEY_ORDERED, as.MapWriteMode.UPDATE), cdtBinName),
@@ -313,7 +313,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 			)
 
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: []interface{}{interface{}(nil), 2, []as.MapPair{{Key: 1, Value: 4}}, []as.MapPair{{Key: 1, Value: 4}, {Key: 2, Value: 3}, {Key: 3, Value: 2}, {Key: 4, Value: 1}}}}))
+			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: as.OpResults{interface{}(nil), 2, []as.MapPair{{Key: 1, Value: 4}}, []as.MapPair{{Key: 1, Value: 4}, {Key: 2, Value: 3}, {Key: 3, Value: 2}, {Key: 4, Value: 1}}}}))
 
 		})
 
@@ -330,12 +330,12 @@ var _ = gg.Describe("CDT Map Test", func() {
 			)
 
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[0]).To(gm.Equal(1))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[1]).To(gm.Equal(2))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[2]).To(gm.Equal(3))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[3]).To(gm.Equal(4))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[4]).To(gm.Equal([]as.MapPair{{Key: 3, Value: 2}}))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[5]).To(gm.ConsistOf([]as.MapPair{{Key: 1, Value: 4}, {Key: 2, Value: 3}, {Key: 3, Value: 2}, {Key: 4, Value: 1}}))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[0]).To(gm.Equal(1))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[1]).To(gm.Equal(2))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[2]).To(gm.Equal(3))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[3]).To(gm.Equal(4))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[4]).To(gm.Equal([]as.MapPair{{Key: 3, Value: 2}}))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[5]).To(gm.ConsistOf([]as.MapPair{{Key: 1, Value: 4}, {Key: 2, Value: 3}, {Key: 3, Value: 2}, {Key: 4, Value: 1}}))
 
 			cdtMap, err = client.Operate(wpolicy, key,
 				as.MapSetPolicyOp(as.NewMapPolicyWithFlagsAndPersistedIndex(as.MapOrder.KEY_ORDERED, as.MapWriteFlagsDefault), cdtBinName),
@@ -346,7 +346,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 			)
 
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: []interface{}{interface{}(nil), 2, []as.MapPair{{Key: 1, Value: 4}}, []as.MapPair{{Key: 1, Value: 4}, {Key: 2, Value: 3}, {Key: 3, Value: 2}, {Key: 4, Value: 1}}}}))
+			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: as.OpResults{interface{}(nil), 2, []as.MapPair{{Key: 1, Value: 4}}, []as.MapPair{{Key: 1, Value: 4}, {Key: 2, Value: 3}, {Key: 3, Value: 2}, {Key: 4, Value: 1}}}}))
 
 		})
 
@@ -399,7 +399,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: []interface{}{
+			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: as.OpResults{
 				[]interface{}{"Harry", "Jim"},
 				[]as.MapPair{{Key: "Charlie", Value: 55}, {Key: "John", Value: 81}},
 				55,
@@ -448,7 +448,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: []interface{}{
+			gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: as.OpResults{
 				[]interface{}{"Charlie", "John"},
 				[]as.MapPair{{Key: "Harry", Value: 82}, {Key: "Jim", Value: 98}},
 				[]interface{}{0, 1, 2, 3},
@@ -490,11 +490,11 @@ var _ = gg.Describe("CDT Map Test", func() {
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
 			// gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: []interface{}{7, nil, 98, []interface{}{79, 84}, []interface{}{"Charlie"}}}))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[0]).To(gm.Equal(7))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[1]).To(gm.BeNil())
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[2]).To(gm.Equal(98))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[3]).To(gm.ConsistOf([]interface{}{79, 84}))
-			gm.Expect(cdtMap.Bins[cdtBinName].([]interface{})[4]).To(gm.Equal([]interface{}{"Charlie"}))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[0]).To(gm.Equal(7))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[1]).To(gm.BeNil())
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[2]).To(gm.Equal(98))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[3]).To(gm.ConsistOf(as.OpResults{79, 84}))
+			gm.Expect(cdtMap.Bins[cdtBinName].(as.OpResults)[4]).To(gm.Equal([]interface{}{"Charlie"}))
 		})
 
 	})
@@ -522,7 +522,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 
-		gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: []interface{}{7, 2, 2, 2, 1}}))
+		gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: as.OpResults{7, 2, 2, 2, 1}}))
 	})
 
 	gg.It("should create a valid CDT Map and then execute Clear operations", func() {
@@ -554,7 +554,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 		)
 
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: []interface{}{nil, 0}}))
+		gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: as.OpResults{nil, 0}}))
 	})
 
 	gg.It("should create a valid CDT Map and then execute RANK operations", func() {
@@ -604,7 +604,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 		)
 
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: []interface{}{[]interface{}{"p1"}, []interface{}{"p3", "p2", "p4"}}}))
+		gm.Expect(cdtMap.Bins).To(gm.Equal(as.BinMap{cdtBinName: as.OpResults{[]interface{}{"p1"}, []interface{}{"p3", "p2", "p4"}}}))
 	})
 
 	gg.It("should support MapWriteFlagsPartial & MapWriteFlagsNoFail", func() {
@@ -754,7 +754,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 		)
 
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(cdtMap.Bins[cdtBinName]).To(gm.Equal([]interface{}{[]interface{}{5, 9}, []interface{}{9}, []interface{}{4, 5, 9}, []interface{}{9}, []interface{}{0, 4, 5, 9}, []interface{}{5}, []interface{}{9}, []interface{}{4}, []interface{}{9}, []interface{}{0}, []interface{}{17}, []interface{}{10, 15, 17}, []interface{}{17}, []interface{}{10}}))
+		gm.Expect(cdtMap.Bins[cdtBinName]).To(gm.Equal(as.OpResults{[]interface{}{5, 9}, []interface{}{9}, []interface{}{4, 5, 9}, []interface{}{9}, []interface{}{0, 4, 5, 9}, []interface{}{5}, []interface{}{9}, []interface{}{4}, []interface{}{9}, []interface{}{0}, []interface{}{17}, []interface{}{10, 15, 17}, []interface{}{17}, []interface{}{10}}))
 	})
 
 	gg.It("should support Relative MapRemove ops", func() {
@@ -787,7 +787,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 		)
 
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(cdtMap.Bins[cdtBinName]).To(gm.Equal([]interface{}{[]interface{}{15, 10}, []interface{}{}, []interface{}{2}}))
+		gm.Expect(cdtMap.Bins[cdtBinName]).To(gm.Equal(as.OpResults{[]interface{}{15, 10}, []interface{}{}, []interface{}{2}}))
 
 		client.Delete(nil, key)
 		cdtMap, err = client.Operate(wpolicy, key,
@@ -801,7 +801,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 			as.MapRemoveByValueRelativeRankRangeCountOp(cdtBinName, 11, -1, 1, as.MapReturnType.VALUE),
 		)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(cdtMap.Bins[cdtBinName]).To(gm.Equal([]interface{}{[]interface{}{17}, []interface{}{10}}))
+		gm.Expect(cdtMap.Bins[cdtBinName]).To(gm.Equal(as.OpResults{[]interface{}{17}, []interface{}{10}}))
 	})
 
 	gg.It("should support Nested Map ops", func() {
@@ -826,7 +826,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 		record, err = client.Operate(wpolicy, key, as.MapPutOp(as.DefaultMapPolicy(), cdtBinName, as.StringValue("key21"), as.IntegerValue(11), as.CtxMapKey(as.StringValue("key2"))), as.GetBinOp(cdtBinName))
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 
-		gm.Expect(record.Bins[cdtBinName]).To(gm.Equal([]interface{}{
+		gm.Expect(record.Bins[cdtBinName]).To(gm.Equal(as.OpResults{
 			2,
 			map[interface{}]interface{}{
 				"key1": map[interface{}]interface{}{
@@ -861,7 +861,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 		record, err = client.Operate(wpolicy, key, as.MapPutOp(as.DefaultMapPolicy(), cdtBinName, as.StringValue("key121"), as.IntegerValue(11), as.CtxMapKey(as.StringValue("key1")), as.CtxMapRank(-1)), as.GetBinOp(cdtBinName))
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 
-		gm.Expect(record.Bins[cdtBinName]).To(gm.Equal([]interface{}{
+		gm.Expect(record.Bins[cdtBinName]).To(gm.Equal(as.OpResults{
 			1,
 			map[interface{}]interface{}{
 				"key1": map[interface{}]interface{}{
@@ -935,7 +935,7 @@ var _ = gg.Describe("CDT Map Test", func() {
 
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 
-		results := record.Bins[cdtBinName].([]interface{})
+		results := record.Bins[cdtBinName].(as.OpResults)
 
 		count := results[1]
 		gm.Expect(count).To(gm.Equal(1))

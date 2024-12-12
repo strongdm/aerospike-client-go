@@ -21,8 +21,8 @@ import (
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	ast "github.com/aerospike/aerospike-client-go/v7/types"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	ast "github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 var _ = gg.Describe("HyperLogLog Test", func() {
@@ -50,10 +50,6 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 	var illegalDescriptions [][]int
 
 	gg.BeforeEach(func() {
-		if *dbaas {
-			gg.Skip("Not supported in DBAAS environment")
-		}
-
 		for i := 0; i < nEntries; i++ {
 			entries = append(entries, as.StringValue("key "+strconv.Itoa(i)))
 		}
@@ -173,7 +169,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 		}
 
 		record := expectSuccess(key, ops...)
-		result_list := record.Bins[binName].([]interface{})
+		result_list := record.Bins[binName].(as.OpResults)
 		count := result_list[1]
 		count1 := result_list[2]
 		description := result_list[3].([]interface{})
@@ -277,7 +273,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 		}
 
 		record := expectSuccess(key, ops...)
-		result_list := record.Bins[binName].([]interface{})
+		result_list := record.Bins[binName].(as.OpResults)
 		count := result_list[1].(int)
 		count1 := result_list[2].(int)
 		description := result_list[3].([]interface{})
@@ -347,7 +343,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 				as.HLLRefreshCountOp(binName),
 				as.HLLDescribeOp(binName))
 
-			resulta_list := recorda.Bins[binName].([]interface{})
+			resulta_list := recorda.Bins[binName].(as.OpResults)
 			counta := resulta_list[1].(int)
 			counta1 := resulta_list[2].(int)
 			descriptiona := resulta_list[3].([]interface{})
@@ -364,7 +360,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 				as.HLLGetCountOp(binName),
 				as.HLLDescribeOp(binName))
 
-			resultb_list := recordb.Bins[binName].([]interface{})
+			resultb_list := recordb.Bins[binName].(as.OpResults)
 			countb := resultb_list[1].(int)
 			n_added0 := resultb_list[2].(int)
 			countb1 := resultb_list[4].(int)
@@ -451,7 +447,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 				as.DeleteOp(),
 				as.HLLAddOp(p, binName, sub_vals, ix, -1),
 				as.HLLGetCountOp(binName))
-			result_list := record.Bins[binName].([]interface{})
+			result_list := record.Bins[binName].(as.OpResults)
 			count := result_list[1].(int)
 
 			expectHLLCount(ix, count, len(sub_vals))
@@ -461,7 +457,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 
 		for i := 0; i < len(keys); i++ {
 			record := expectSuccess(keys[i], as.GetBinOp(binName), as.HLLGetCountOp(binName))
-			result_list := record.Bins[binName].([]interface{})
+			result_list := record.Bins[binName].(as.OpResults)
 			hll := result_list[0].(as.HLLValue)
 
 			gm.Expect(hll).NotTo(gm.BeNil())
@@ -484,7 +480,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 		}
 
 		record_union := expectSuccess(key, ops...)
-		union_result_list := record_union.Bins[binName].([]interface{})
+		union_result_list := record_union.Bins[binName].(as.OpResults)
 		union_count := union_result_list[2].(int)
 		union_count2 := union_result_list[4].(int)
 
@@ -496,7 +492,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 			record := expectSuccess(key,
 				as.HLLAddOp(p, binName, sub_vals, index_bits, -1),
 				as.HLLGetCountOp(binName))
-			result_list := record.Bins[binName].([]interface{})
+			result_list := record.Bins[binName].(as.OpResults)
 			n_added := result_list[0].(int)
 			count := result_list[1].(int)
 
@@ -539,7 +535,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 			as.DeleteOp(),
 			as.HLLAddOp(as.DefaultHLLPolicy(), otherName, entries, index_bits, -1),
 			as.GetBinOp(otherName))
-		result_list := record.Bins[otherName].([]interface{})
+		result_list := record.Bins[otherName].(as.OpResults)
 		hll := result_list[1].(as.HLLValue)
 
 		hlls = append(hlls, hll)
@@ -644,7 +640,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 				as.HLLAddOp(as.DefaultHLLPolicy(), binName, sub_vals, index_bits, -1),
 				as.GetBinOp(binName))
 
-			result_list := record.Bins[binName].([]interface{})
+			result_list := record.Bins[binName].(as.OpResults)
 			hlls = append(hlls, result_list[1].(as.HLLValue))
 			expected_union_count += len(sub_vals)
 			vals = append(vals, sub_vals)
@@ -659,7 +655,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 		record := expectSuccess(key,
 			as.HLLGetUnionOp(binName, hlls),
 			as.HLLGetUnionCountOp(binName, hlls))
-		result_list := record.Bins[binName].([]interface{})
+		result_list := record.Bins[binName].(as.OpResults)
 		union_count := result_list[1].(int)
 
 		expectHLLCount(index_bits, union_count, expected_union_count)
@@ -669,7 +665,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 		record = expectSuccess(key,
 			as.PutOp(as.NewBin(binName, union_hll)),
 			as.HLLGetCountOp(binName))
-		result_list = record.Bins[binName].([]interface{})
+		result_list = record.Bins[binName].(as.OpResults)
 		union_count_2 := result_list[1].(int)
 
 		gm.Expect(union_count).To(gm.Equal(union_count_2))
@@ -694,7 +690,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 				as.HLLGetCountOp(binName),
 				as.HLLDescribeOp(binName))
 
-			result_list := record.Bins[binName].([]interface{})
+			result_list := record.Bins[binName].(as.OpResults)
 			count := result_list[0].(int)
 			description := result_list[1].([]interface{})
 
@@ -737,7 +733,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 				as.HLLAddOp(as.DefaultHLLPolicy(), binName, common, index_bits, minhash_bits),
 				as.GetBinOp(binName))
 
-			result_list := record.Bins[binName].([]interface{})
+			result_list := record.Bins[binName].(as.OpResults)
 			hlls = append(hlls, result_list[2].(as.HLLValue))
 		}
 
@@ -747,7 +743,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 			as.HLLInitOp(as.DefaultHLLPolicy(), binName+"other", index_bits, minhash_bits),
 			as.HLLSetUnionOp(as.DefaultHLLPolicy(), binName, hlls),
 			as.HLLDescribeOp(binName))
-		result_list := record.Bins[binName].([]interface{})
+		result_list := record.Bins[binName].(as.OpResults)
 		description := result_list[1].([]interface{})
 
 		expectDescription(description, index_bits, minhash_bits)
@@ -755,7 +751,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 		record = expectSuccess(key,
 			as.HLLGetSimilarityOp(binName, hlls),
 			as.HLLGetIntersectCountOp(binName, hlls))
-		result_list = record.Bins[binName].([]interface{})
+		result_list = record.Bins[binName].(as.OpResults)
 		sim := result_list[0].(float64)
 		intersect_count := result_list[1].(int)
 		expected_similarity := overlap
@@ -766,10 +762,6 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 	}
 
 	gg.It("Similarity should work", func() {
-		if *proxy {
-			gg.Skip("Too long for the Proxy Client")
-		}
-
 		overlaps := []float64{0.0001, 0.001, 0.01, 0.1, 0.5}
 
 		nEntries := 1 << 18
@@ -817,7 +809,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 				as.HLLInitOp(as.DefaultHLLPolicy(), binName, nIndexBits, nMinhashBits),
 				as.GetBinOp(binName))
 
-			resultList := record.Bins[binName].([]interface{})
+			resultList := record.Bins[binName].(as.OpResults)
 			var hlls []as.HLLValue
 
 			hlls = append(hlls, resultList[1].(as.HLLValue))
@@ -826,7 +818,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 				as.HLLGetSimilarityOp(binName, hlls),
 				as.HLLGetIntersectCountOp(binName, hlls))
 
-			resultList = record.Bins[binName].([]interface{})
+			resultList = record.Bins[binName].(as.OpResults)
 
 			sim := resultList[0].(float64)
 			intersectCount := resultList[1].(int)
@@ -856,19 +848,19 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 
 			var hlls []as.HLLValue
 			var hmhs []as.HLLValue
-			resultList := record.Bins[binName].([]interface{})
+			resultList := record.Bins[binName].(as.OpResults)
 
 			hlls = append(hlls, resultList[1].(as.HLLValue))
 			hlls = append(hlls, hlls[0])
 
-			resultList = record.Bins[otherBinName].([]interface{})
+			resultList = record.Bins[otherBinName].(as.OpResults)
 			hmhs = append(hmhs, resultList[1].(as.HLLValue))
 			hmhs = append(hmhs, hmhs[0])
 
 			record = expectSuccess(key,
 				as.HLLGetIntersectCountOp(binName, hlls),
 				as.HLLGetSimilarityOp(binName, hlls))
-			resultList = record.Bins[binName].([]interface{})
+			resultList = record.Bins[binName].(as.OpResults)
 
 			intersectCount := resultList[0].(int)
 
@@ -884,7 +876,7 @@ var _ = gg.Describe("HyperLogLog Test", func() {
 			record = expectSuccess(key,
 				as.HLLGetIntersectCountOp(binName, hmhs),
 				as.HLLGetSimilarityOp(binName, hmhs))
-			resultList = record.Bins[binName].([]interface{})
+			resultList = record.Bins[binName].(as.OpResults)
 			intersectCount = resultList[0].(int)
 
 			gm.Expect(float64(intersectCount) < 1.8*float64(len(entries))).To(gm.BeTrue())
