@@ -20,8 +20,8 @@ import (
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	ast "github.com/aerospike/aerospike-client-go/v7/types"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	ast "github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 var _ = gg.Describe("CDT Bitwise Test", func() {
@@ -74,7 +74,7 @@ var _ = gg.Describe("CDT Bitwise Test", func() {
 		record, err := client.Operate(nil, key, full_ops...)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 
-		result_list := record.Bins[cdtBinName].([]interface{})
+		result_list := record.Bins[cdtBinName].(as.OpResults)
 		lscan1_result := result_list[len(result_list)-7].(int)
 		rscan1_result := result_list[len(result_list)-6].(int)
 		getint_result := result_list[len(result_list)-5].(int)
@@ -109,8 +109,8 @@ var _ = gg.Describe("CDT Bitwise Test", func() {
 		rec, err := client.Operate(wpolicy, key, ops...)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 
-		gm.Expect(rec.Bins[cdtBinName]).To(gm.BeAssignableToTypeOf([]interface{}{}))
-		binResults := rec.Bins[cdtBinName].([]interface{})
+		gm.Expect(rec.Bins[cdtBinName]).To(gm.BeAssignableToTypeOf(as.OpResults{}))
+		binResults := rec.Bins[cdtBinName].(as.OpResults)
 		results := make([]int64, len(binResults))
 		for i := range binResults {
 			results[i] = int64(binResults[i].(int))
@@ -161,7 +161,7 @@ var _ = gg.Describe("CDT Bitwise Test", func() {
 
 		// // make a fresh list before each operation
 		// gg.BeforeEach(func() {
-		// 	list = []interface{}{}
+		// 	list = as.OpResults{}
 
 		// 	for i := 1; i <= listSize; i++ {
 		// 		list = append(list, i)
@@ -573,7 +573,7 @@ var _ = gg.Describe("CDT Bitwise Test", func() {
 
 			// assertRecordFound(key, record)
 
-			result_list := record.Bins[cdtBinName].([]interface{})
+			result_list := record.Bins[cdtBinName].(as.OpResults)
 			results := make([][]byte, len(expected))
 
 			for i := 0; i < len(expected); i++ {
@@ -948,7 +948,7 @@ var _ = gg.Describe("CDT Bitwise Test", func() {
 				as.BitResizeOp(policy, cdtBinName, 0, as.BitResizeFlagsShrinkOnly),
 			)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			result_list := record.Bins[cdtBinName].([]interface{})
+			result_list := record.Bins[cdtBinName].(as.OpResults)
 			get0 := result_list[1].([]byte)
 			get1 := result_list[3].([]byte)
 			get2 := result_list[5].([]byte)

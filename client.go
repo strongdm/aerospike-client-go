@@ -26,8 +26,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/aerospike-client-go/v7/logger"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/logger"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 const unreachable = "UNREACHABLE"
@@ -910,11 +910,6 @@ func (clnt *Client) BatchExecute(policy *BatchPolicy, udfPolicy *BatchUDFPolicy,
 //
 // If the policy is nil, the default relevant policy will be used.
 func (clnt *Client) Operate(policy *WritePolicy, key *Key, operations ...*Operation) (*Record, Error) {
-	return clnt.operate(policy, key, false, operations...)
-}
-
-// useOpResults is used in batch single nodes commands and should be true to return the right type for BatchOperate results
-func (clnt *Client) operate(policy *WritePolicy, key *Key, useOpResults bool, operations ...*Operation) (*Record, Error) {
 	// TODO: Remove this method in the next major release.
 	policy = clnt.getUsableWritePolicy(policy)
 	args, err := newOperateArgs(clnt.cluster, policy, key, operations)
@@ -931,7 +926,7 @@ func (clnt *Client) operate(policy *WritePolicy, key *Key, useOpResults bool, op
 			}
 		}
 
-		command, err := newOperateCommandWrite(clnt.cluster, key, args, useOpResults)
+		command, err := newOperateCommandWrite(clnt.cluster, key, args)
 		if err != nil {
 			return nil, err
 		}
@@ -947,7 +942,7 @@ func (clnt *Client) operate(policy *WritePolicy, key *Key, useOpResults bool, op
 			}
 		}
 
-		command, err := newOperateCommandRead(clnt.cluster, key, args, useOpResults)
+		command, err := newOperateCommandRead(clnt.cluster, key, args)
 		if err != nil {
 			return nil, err
 		}
@@ -1182,7 +1177,7 @@ func (clnt *Client) ListUDF(policy *BasePolicy) ([]*UDF, Error) {
 //
 // This method is only supported by Aerospike 3+ servers.
 // If the policy is nil, the default relevant policy will be used.
-func (clnt *Client) Execute(policy *WritePolicy, key *Key, packageName string, functionName string, args ...Value) (interface{}, Error) {
+func (clnt *Client) Execute(policy *WritePolicy, key *Key, packageName string, functionName string, args ...Value) (any, Error) {
 	record, err := clnt.execute(policy, key, packageName, functionName, args...)
 	if err != nil {
 		return nil, err
@@ -2007,7 +2002,7 @@ func (clnt *Client) DisableMetrics() {
 }
 
 // Stats returns internal statistics regarding the inner state of the client and the cluster.
-func (clnt *Client) Stats() (map[string]interface{}, Error) {
+func (clnt *Client) Stats() (map[string]any, Error) {
 	resStats := clnt.cluster.statsCopy()
 
 	clusterStats := *newNodeStats(clnt.cluster.MetricsPolicy())
@@ -2022,7 +2017,7 @@ func (clnt *Client) Stats() (map[string]interface{}, Error) {
 		return nil, newCommonError(err)
 	}
 
-	res := map[string]interface{}{}
+	res := map[string]any{}
 	err = json.Unmarshal(b, &res)
 	if err != nil {
 		return nil, newCommonError(err)
@@ -2031,7 +2026,7 @@ func (clnt *Client) Stats() (map[string]interface{}, Error) {
 	res["open-connections"] = clusterStats.ConnectionsOpen.Get()
 	res["total-nodes"] = len(clnt.cluster.GetNodes())
 
-	aggstats := res["cluster-aggregated-stats"].(map[string]interface{})
+	aggstats := res["cluster-aggregated-stats"].(map[string]any)
 	aggstats["exceeded-max-retries"] = clnt.cluster.maxRetriesExceededCount.Get()
 	aggstats["exceeded-total-timeout"] = clnt.cluster.totalTimeoutExceededCount.Get()
 

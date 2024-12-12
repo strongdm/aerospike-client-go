@@ -15,8 +15,8 @@
 package aerospike_test
 
 import (
-	as "github.com/aerospike/aerospike-client-go/v7"
-	ast "github.com/aerospike/aerospike-client-go/v7/types"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	ast "github.com/aerospike/aerospike-client-go/v8/types"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -60,7 +60,7 @@ var _ = gg.Describe("Expression Operations", func() {
 		)
 
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(rec.Bins).To(gm.Equal(as.BinMap{"C": []interface{}{nil, []interface{}{"a", "b", "c", "d"}}, "var": []interface{}{"a", "b", "c", "d"}}))
+		gm.Expect(rec.Bins).To(gm.Equal(as.BinMap{"C": as.OpResults{nil, []any{"a", "b", "c", "d"}}, "var": []any{"a", "b", "c", "d"}}))
 	})
 
 	gg.It("Read Eval error should work", func() {
@@ -212,7 +212,7 @@ var _ = gg.Describe("Expression Operations", func() {
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 		gm.Expect(len(r.Bins)).To(gm.BeNumerically(">", 0))
 
-		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{binC: []interface{}{nil, nil}}))
+		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{binC: as.OpResults{nil, nil}}))
 	})
 
 	gg.It("Return Nil should work", func() {
@@ -235,7 +235,7 @@ var _ = gg.Describe("Expression Operations", func() {
 			as.ExpReadOp(expVar, exp, as.ExpReadFlagDefault),
 		)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: 5, binC: []interface{}{nil, 5}}))
+		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: 5, binC: as.OpResults{nil, 5}}))
 
 		r, err = client.Operate(nil, keyA,
 			as.ExpReadOp(expVar, exp, as.ExpReadFlagDefault),
@@ -253,7 +253,7 @@ var _ = gg.Describe("Expression Operations", func() {
 			as.ExpReadOp(expVar, exp, as.ExpReadFlagDefault),
 		)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: 5.1, binC: []interface{}{nil, 5.1}}))
+		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: 5.1, binC: as.OpResults{nil, 5.1}}))
 
 		r, err = client.Operate(nil, keyA,
 			as.ExpReadOp(expVar, exp, as.ExpReadFlagDefault),
@@ -272,7 +272,7 @@ var _ = gg.Describe("Expression Operations", func() {
 			as.ExpReadOp(expVar, exp, as.ExpReadFlagDefault),
 		)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: str, binC: []interface{}{nil, str}}))
+		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: str, binC: as.OpResults{nil, str}}))
 
 		r, err = client.Operate(nil, keyA,
 			as.ExpReadOp(expVar, exp, as.ExpReadFlagDefault),
@@ -291,7 +291,7 @@ var _ = gg.Describe("Expression Operations", func() {
 			as.ExpReadOp(expVar, exp, as.ExpReadFlagDefault),
 		)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: blob, binC: []interface{}{nil, blob}}))
+		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: blob, binC: as.OpResults{nil, blob}}))
 
 		r, err = client.Operate(nil, keyA,
 			as.ExpReadOp(expVar, exp, as.ExpReadFlagDefault),
@@ -309,7 +309,7 @@ var _ = gg.Describe("Expression Operations", func() {
 			as.ExpReadOp(expVar, exp, as.ExpReadFlagDefault),
 		)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
-		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: true, binC: []interface{}{nil, true}}))
+		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{expVar: true, binC: as.OpResults{nil, true}}))
 	})
 
 	gg.It("Return HLL should work", func() {
@@ -324,11 +324,11 @@ var _ = gg.Describe("Expression Operations", func() {
 		)
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 		gm.Expect(r.Bins).To(gm.Equal(as.BinMap{
-			binH: []interface{}{
+			binH: as.OpResults{
 				nil,
 				as.HLLValue([]uint8{0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
 			},
-			binC: []interface{}{
+			binC: as.OpResults{
 				nil,
 				as.HLLValue([]uint8{0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}),
 			},

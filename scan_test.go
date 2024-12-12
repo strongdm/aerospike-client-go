@@ -19,9 +19,9 @@ import (
 	"math"
 	"math/rand"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	ast "github.com/aerospike/aerospike-client-go/v7/types"
-	particleType "github.com/aerospike/aerospike-client-go/v7/types/particle_type"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	ast "github.com/aerospike/aerospike-client-go/v8/types"
+	particleType "github.com/aerospike/aerospike-client-go/v8/types/particle_type"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"

@@ -14,7 +14,7 @@
 
 package aerospike
 
-import "github.com/aerospike/aerospike-client-go/v7/types"
+import "github.com/aerospike/aerospike-client-go/v8/types"
 
 // guarantee baseWriteCommand implements command interface
 var _ command = &baseWriteCommand{}

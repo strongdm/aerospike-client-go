@@ -15,7 +15,7 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 // guarantee existsCommand implements command interface

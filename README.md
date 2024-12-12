@@ -1,24 +1,24 @@
-# Aerospike Go Client v7
+# Aerospike Go Client v8
 
-[![Aerospike Client Go](https://goreportcard.com/badge/github.com/aerospike/aerospike-client-go/v7)](https://goreportcard.com/report/github.com/aerospike/aerospike-client-go/v7)
-[![Godoc](https://godoc.org/github.com/aerospike/aerospike-client-go/v7?status.svg)](https://pkg.go.dev/github.com/aerospike/aerospike-client-go/v7)
-[![Tests](https://github.com/aerospike/aerospike-client-go/actions/workflows/build.yml/badge.svg?branch=v7&event=push)](github.com/aerospike/aerospike-client-go/actions)
+[![Aerospike Client Go](https://goreportcard.com/badge/github.com/aerospike/aerospike-client-go/v8)](https://goreportcard.com/report/github.com/aerospike/aerospike-client-go/v8)
+[![Godoc](https://godoc.org/github.com/aerospike/aerospike-client-go/v8?status.svg)](https://pkg.go.dev/github.com/aerospike/aerospike-client-go/v8)
+[![Tests](https://github.com/aerospike/aerospike-client-go/actions/workflows/build.yml/badge.svg?branch=v8&event=push)](github.com/aerospike/aerospike-client-go/actions)
 
 An Aerospike library for Go.
 
-This library is compatible with Go 1.20+ and supports the following operating systems: Linux, Mac OS X (Windows builds are possible, but untested).
+This library is compatible with Go 1.23+ and supports the following operating systems: Linux, Mac OS X (Windows builds are possible, but untested).
 
-Up-to-date documentation is available in the [![Godoc](https://godoc.org/github.com/aerospike/aerospike-client-go/v7?status.svg)](https://pkg.go.dev/github.com/aerospike/aerospike-client-go/v7).
+Up-to-date documentation is available in the [![Godoc](https://godoc.org/github.com/aerospike/aerospike-client-go/v8?status.svg)](https://pkg.go.dev/github.com/aerospike/aerospike-client-go/v8).
 
 You can refer to the test files for idiomatic use cases.
 
 Please refer to [`CHANGELOG.md`](CHANGELOG.md) for release notes, or if you encounter breaking changes.
 
-- [Aerospike Go Client v7](#aerospike-go-client-v7)
+- [Aerospike Go Client v8](#aerospike-go-client-v8)
   - [Usage](#usage)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-    - [Some Hints:](#some-hints)
+    - [Some Tips](#some-tips)
   - [Performance Tweaking](#performance-tweaking)
   - [Tests](#tests)
   - [Examples](#examples)
@@ -27,7 +27,6 @@ Please refer to [`CHANGELOG.md`](CHANGELOG.md) for release notes, or if you enco
   - [API Documentation](#api-documentation)
   - [Google App Engine](#google-app-engine)
   - [Reflection, and Object API](#reflection-and-object-api)
-  - [Proxy Client / DBAAS](#proxy-client--dbaas)
   - [License](#license)
 
 ## Usage
@@ -40,7 +39,7 @@ package main
 import (
   "fmt"
 
-  aero "github.com/aerospike/aerospike-client-go/v7"
+  aero "github.com/aerospike/aerospike-client-go/v8"
 )
 
 // This is only for this example.
@@ -63,7 +62,7 @@ func main() {
   bins := aero.BinMap{
     "bin1": 42,
     "bin2": "An elephant is a mouse with an operating system",
-    "bin3": []interface{}{"Go", 2009},
+    "bin3": []any{"Go", 2009},
   }
 
   // write the bins
@@ -89,11 +88,10 @@ Details about the API are available in the [`docs`](docs) directory.
 <a name="Prerequisites"></a>
 ## Prerequisites
 
-[Go](http://golang.org) version v1.20+ is required.
+[Go](http://golang.org) version v1.23+ is required.
 
 To install the latest stable version of Go, visit
 [http://golang.org/dl/](http://golang.org/dl/)
-
 
 Aerospike Go client implements the wire protocol, and does not depend on the C client.
 It is goroutine friendly, and works asynchronously.
@@ -108,16 +106,14 @@ Supported operating systems:
 ## Installation
 
 1. Install Go 1.21+ and setup your environment as [Documented](http://golang.org/doc/code.html#GOPATH) here.
-2. Get the client in your ```GOPATH``` : ```go get github.com/aerospike/aerospike-client-go/v7```
-  - To update the client library: ```go get -u github.com/aerospike/aerospike-client-go/v7```
+2. Get the client in your ```GOPATH``` : ```go get github.com/aerospike/aerospike-client-go/v8```
+  - To update the client library: ```go get -u github.com/aerospike/aerospike-client-go/v8```
 
-Using [gopkg.in](https://gopkg.in/) is also supported: `go get -u gopkg.in/aerospike/aerospike-client-go.v7`
-
-### Some Hints:
+### Some Tips
 
 - To run a go program directly: ```go run <filename.go>```
 - to build:  ```go build -o <output> <filename.go>```
-- example: ```go build -tags as_proxy -o benchmark tools/benchmark/benchmark.go```
+- example: ```go build -tags as_performance -o benchmark tools/benchmark/benchmark.go```
 
 <a name="Performance"></a>
 ## Performance Tweaking
@@ -160,7 +156,7 @@ See the [`tools/benchmark/README.md`](tools/benchmark/README.md) for details.
 <a name="api-documentation"></a>
 ## API Documentation
 
-A simple API documentation is available in the [`docs`](docs/README.md) directory. The latest up-to-date docs can be found in [![Godoc](https://godoc.org/github.com/aerospike/aerospike-client-go?status.svg)](https://pkg.go.dev/github.com/aerospike/aerospike-client-go/v7).
+A simple API documentation is available in the [`docs`](docs/README.md) directory. The latest up-to-date docs can be found in [![Godoc](https://godoc.org/github.com/aerospike/aerospike-client-go?status.svg)](https://pkg.go.dev/github.com/aerospike/aerospike-client-go/v8).
 
 <a name="google-app-engine"></a>
 ## Google App Engine
@@ -173,11 +169,6 @@ To build the library for App Engine, build it with the build tag `app_engine`. A
 
 To make the library both flexible and fast, we had to integrate the reflection API (methods with `[Get/Put/...]Object` names) tightly in the library. In case you wanted to avoid mixing those API in your app inadvertently, you can use the build tag `as_performance` to remove those APIs from the build.
 
-
-<a name="proxy-client--dbaas"></a>
-## Proxy Client / DBAAS
-
-To compile the client for the proxy server in our database-as-a-service (dbaas) environment, pass `-tags as_proxy` to the compiler on build.
 
 <a name="license"></a>
 ## License

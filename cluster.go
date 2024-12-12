@@ -24,11 +24,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	iatomic "github.com/aerospike/aerospike-client-go/v7/internal/atomic"
-	sm "github.com/aerospike/aerospike-client-go/v7/internal/atomic/map"
-	"github.com/aerospike/aerospike-client-go/v7/internal/seq"
-	"github.com/aerospike/aerospike-client-go/v7/logger"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	iatomic "github.com/aerospike/aerospike-client-go/v8/internal/atomic"
+	sm "github.com/aerospike/aerospike-client-go/v8/internal/atomic/map"
+	"github.com/aerospike/aerospike-client-go/v8/internal/seq"
+	"github.com/aerospike/aerospike-client-go/v8/logger"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 // Cluster encapsulates the aerospike cluster nodes and manages

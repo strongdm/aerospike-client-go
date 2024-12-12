@@ -21,8 +21,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
+
+// Specifies if stack traces should be included in the error.
+var StackTracesEnabled = false
 
 // Error is the internal error interface for the Aerospike client's errors.
 // All the public API return this error type. This interface is compatible
@@ -436,24 +439,26 @@ func (st *stackFrame) String() string {
 }
 
 func stackTrace(err Error) []stackFrame {
-	const maxDepth = 10
-	sFrames := make([]stackFrame, 0, maxDepth)
-	for i := 3; i <= maxDepth+3; i++ {
-		pc, fl, ln, ok := runtime.Caller(i)
-		if !ok {
-			break
+	if StackTracesEnabled {
+		const maxDepth = 10
+		sFrames := make([]stackFrame, 0, maxDepth)
+		for i := 3; i <= maxDepth+3; i++ {
+			pc, fl, ln, ok := runtime.Caller(i)
+			if !ok {
+				break
+			}
+			fn := runtime.FuncForPC(pc)
+			sFrame := stackFrame{
+				fl: fl,
+				fn: fn.Name(),
+				ln: ln,
+			}
+			sFrames = append(sFrames, sFrame)
 		}
-		fn := runtime.FuncForPC(pc)
-		sFrame := stackFrame{
-			fl: fl,
-			fn: fn.Name(),
-			ln: ln,
-		}
-		sFrames = append(sFrames, sFrame)
-	}
 
-	if len(sFrames) > 0 {
-		return sFrames
+		if len(sFrames) > 0 {
+			return sFrames
+		}
 	}
 	return nil
 }

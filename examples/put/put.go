@@ -21,7 +21,7 @@ import (
 	"os"
 	"strconv"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
 var (

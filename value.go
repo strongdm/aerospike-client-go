@@ -19,10 +19,10 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	ParticleType "github.com/aerospike/aerospike-client-go/v7/types/particle_type"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	ParticleType "github.com/aerospike/aerospike-client-go/v8/types/particle_type"
 
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 // this function will be set in value_slow file if included
@@ -704,7 +704,6 @@ type LongValue int64
 
 // NewLongValue generates a LongValue instance.
 func NewLongValue(value int64) LongValue {
-	// TODO: Remove this type, it's not necessary next to IntegerValue
 	return LongValue(value)
 }
 

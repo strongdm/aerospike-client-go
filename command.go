@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aerospike/aerospike-client-go/v7/logger"
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	"github.com/aerospike/aerospike-client-go/v7/types/pool"
+	"github.com/aerospike/aerospike-client-go/v8/logger"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	"github.com/aerospike/aerospike-client-go/v8/types/pool"
 
-	ParticleType "github.com/aerospike/aerospike-client-go/v7/types/particle_type"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	ParticleType "github.com/aerospike/aerospike-client-go/v8/types/particle_type"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 const (
@@ -1078,7 +1078,7 @@ func (cmd *baseCommand) setUdf(policy *WritePolicy, key *Key, packageName string
 }
 
 func (cmd *baseCommand) setBatchOperateIfc(
-	client ClientIfc,
+	client *Client,
 	policy *BatchPolicy,
 	records []BatchRecordIfc,
 	batch *batchNode,
@@ -1088,7 +1088,7 @@ func (cmd *baseCommand) setBatchOperateIfc(
 }
 
 func (cmd *baseCommand) setBatchOperateIfcOffsets(
-	client ClientIfc,
+	client *Client,
 	policy *BatchPolicy,
 	records []BatchRecordIfc,
 	offsets BatchOffsets,
@@ -1510,8 +1510,6 @@ func (cmd *baseCommand) setBatchUDFOffsets(
 		}
 
 		// Try reference equality in hope that namespace/set for all keys is set from fixed variables.
-		// TODO: Implement canRepeat
-		// if !attr.sendKey && keyPrev != nil && keyPrev.namespace == key.namespace && (keyPrev.setName == key.setName) {
 		if canRepeatAttr(attr, key, keyPrev, ver, verPrev) {
 			// Can set repeat previous namespace/bin names to save space.
 			cmd.dataOffset++
@@ -2965,7 +2963,6 @@ func (cmd *baseCommand) writeKeyAttr(
 	return nil
 }
 
-// TODO: Check this with the java client, including the references
 func (cmd *baseCommand) writeKeyWithPolicy(policy *BasePolicy, key *Key, sendDeadline bool) Error {
 	if err := cmd.writeKey(key); err != nil {
 		return err
@@ -3539,14 +3536,6 @@ func (cmd *baseCommand) executeAt(ifc command, policy *BasePolicy, deadline time
 				applyTransactionErrorMetrics(cmd.node)
 				return chainErrors(err, errChain).iter(cmd.commandSentCounter).setNode(cmd.node).setInDoubt(ifc.isRead(), cmd.commandSentCounter)
 			}
-
-			// TODO: Redundant. Move everything to the prepareBuffer method and remove the branch on top of this block.
-			// // now that the deadline has been set in the buffer, compress the contents
-			// if err = cmd.prepareBuffer(ifc, deadline); err != nil {
-			// 	applyTransactionErrorMetrics(cmd.node)
-			// 	applyTransactionMetrics(cmd.node, ifc.transactionType(), transStart)
-			// 	return chainErrors(err, errChain).iter(cmd.commandSentCounter).setNode(cmd.node)
-			// }
 		}
 
 		// Send command.

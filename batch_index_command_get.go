@@ -15,15 +15,17 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 type batchIndexCommandGet struct {
 	batchCommandOperate
+
+	indexRecords []*BatchRead
 }
 
 func newBatchIndexCommandGet(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	records []*BatchRead,
@@ -36,6 +38,7 @@ func newBatchIndexCommandGet(
 
 	res := batchIndexCommandGet{
 		batchCommandOperate: newBatchCommandOperate(client, batch, policy, recIfcs),
+		indexRecords:        records,
 	}
 	res.txn = policy.Txn
 	return res
@@ -56,9 +59,8 @@ func (cmd *batchIndexCommandGet) Execute() Error {
 	return cmd.execute(cmd)
 }
 
-func (cmd *batchIndexCommandGet) executeSingle(client clientIfc) Error {
-	for _, br := range cmd.records {
-		br := br.(*BatchRead)
+func (cmd *batchIndexCommandGet) executeSingle(client *Client) Error {
+	for _, br := range cmd.indexRecords {
 		var ops []*Operation
 		if br.headerOnly() {
 			ops = []*Operation{GetHeaderOp()}
@@ -66,10 +68,12 @@ func (cmd *batchIndexCommandGet) executeSingle(client clientIfc) Error {
 			for i := range br.BinNames {
 				ops = append(ops, GetBinOp(br.BinNames[i]))
 			}
-		} else {
+		} else if len(br.Ops) > 0 {
 			ops = br.Ops
+		} else {
+			ops = []*Operation{GetOp()}
 		}
-		res, err := client.operate(cmd.policy.toWritePolicy(), br.Key, true, ops...)
+		res, err := client.Operate(cmd.policy.toWritePolicy(), br.Key, ops...)
 		br.setRecord(res)
 		if err != nil {
 			br.setRawError(err)

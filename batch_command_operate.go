@@ -17,8 +17,8 @@ package aerospike
 import (
 	"reflect"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchCommandOperate struct {
@@ -33,7 +33,7 @@ type batchCommandOperate struct {
 }
 
 func newBatchCommandOperate(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	records []BatchRecordIfc,
@@ -132,7 +132,7 @@ func (cmd *batchCommandOperate) parseRecordResults(ifc command, receiveSize int)
 				}
 
 				// for UDF failures
-				var msg interface{}
+				var msg any
 				if rec != nil {
 					msg = rec.Bins["FAILURE"]
 				}
@@ -229,7 +229,7 @@ func (cmd *batchCommandOperate) parseRecord(key *Key, opCount int, generation, e
 	return newRecord(cmd.node, key, bins, generation, expiration), nil
 }
 
-func (cmd *batchCommandOperate) executeSingle(client clientIfc) Error {
+func (cmd *batchCommandOperate) executeSingle(client *Client) Error {
 	var res *Record
 	var err Error
 	for _, br := range cmd.records {
@@ -246,14 +246,14 @@ func (cmd *batchCommandOperate) executeSingle(client clientIfc) Error {
 			} else if len(ops) == 0 {
 				ops = append(ops, GetOp())
 			}
-			res, err = client.operate(cmd.client.getUsableBatchReadPolicy(br.Policy).toWritePolicy(cmd.policy), br.Key, true, ops...)
+			res, err = client.Operate(cmd.client.getUsableBatchReadPolicy(br.Policy).toWritePolicy(cmd.policy), br.Key, ops...)
 		case *BatchWrite:
 			policy := cmd.client.getUsableBatchWritePolicy(br.Policy).toWritePolicy(cmd.policy)
 			policy.RespondPerEachOp = true
-			res, err = client.operate(policy, br.Key, true, br.Ops...)
+			res, err = client.Operate(policy, br.Key, br.Ops...)
 		case *BatchDelete:
 			policy := cmd.client.getUsableBatchDeletePolicy(br.Policy).toWritePolicy(cmd.policy)
-			res, err = client.operate(policy, br.Key, true, DeleteOp())
+			res, err = client.Operate(policy, br.Key, DeleteOp())
 		case *BatchUDF:
 			policy := cmd.client.getUsableBatchUDFPolicy(br.Policy).toWritePolicy(cmd.policy)
 			policy.RespondPerEachOp = true

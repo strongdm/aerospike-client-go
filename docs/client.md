@@ -392,7 +392,7 @@ Example:
     "a": "Lack of skill dictates economy of style.",
     "b": 123,
     "c": []int{1, 2, 3},
-    "d": map[string]interface{}{"a": 42, "b": "An elephant is mouse with an operating system."},
+    "d": map[string]any{"a": 42, "b": "An elephant is mouse with an operating system."},
   }
 
   err := client.Put(nil, key, bins)
@@ -424,7 +424,7 @@ Example:
   bin1 := NewBin("a", "Lack of skill dictates economy of style.")
   bin2 := NewBin("b", 123)
   bin3 := NewBin("c", []int{1, 2, 3})
-  bin4 := NewBin("d", map[string]interface{}{"a": 42, "b": "An elephant is mouse with an operating system."})
+  bin4 := NewBin("d", map[string]any{"a": 42, "b": "An elephant is mouse with an operating system."})
 
   err := client.PutBins(nil, key, bin1, bin2, bin3, bin4)
 ```
@@ -647,7 +647,7 @@ execute()
 -->
 <a name="execute"></a>
 
-### Execute(policy *WritePolicy, key *Key, packageName string, functionName string, args ...Value) (interface{}, error)
+### Execute(policy *WritePolicy, key *Key, packageName string, functionName string, args ...Value) (any, error)
 
 Executes a UDF on a record with the given key, and returns the results.
 
@@ -666,7 +666,7 @@ Considering the UDF registered in RegisterUDF example above:
 ```go
     res, err := client.Execute(nil, key, "udf1", "testFunc1")
 
-    // res will be a: map[interface{}]interface{}{"status": "OK"}
+    // res will be a: map[any]any{"status": "OK"}
 ```
 <!--
 ################################################################################

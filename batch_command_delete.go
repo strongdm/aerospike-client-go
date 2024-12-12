@@ -15,8 +15,8 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchCommandDelete struct {
@@ -29,7 +29,7 @@ type batchCommandDelete struct {
 }
 
 func newBatchCommandDelete(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	batchDeletePolicy *BatchDeletePolicy,
@@ -174,7 +174,7 @@ func (cmd *batchCommandDelete) commandType() commandType {
 	return ttBatchWrite
 }
 
-func (cmd *batchCommandDelete) executeSingle(client clientIfc) Error {
+func (cmd *batchCommandDelete) executeSingle(client *Client) Error {
 	policy := cmd.batchDeletePolicy.toWritePolicy(cmd.policy)
 	for i, key := range cmd.keys {
 		res, err := client.Operate(policy, key, DeleteOp())

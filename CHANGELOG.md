@@ -1,8 +1,14 @@
 # Change History
 
-## December 12 2024: v7.8.0-beta.1
+## December 13 2024: v8.0.0-beta.1
 
-  Major feature release.
+  Major breaking release. This release supports Multi-Record Transactions. Please note that this is a beta release and will be subject to breaking changes.
+
+- **Breaking Changes**
+  - This release removes the proxy client and associated mock interfaces from the codebase. Maintaining those interfaces was very hard due to multiple build flags which had their own set of of supported API. Since interfaces are implicit, doing that by the user is as easy, or potentially easier outside of the library.
+  - Operation used to return the result of multiple ops on a single bin wrapped in `[]any`. That would be confusing, since it was not clear if the result was the contents of the bin, or the results of multiple commands. In version 8, the client will wrap those results inside a `as.OpResults` instead of a `[]any`, removing the confusion.
+  - The client would automatically populate the `stackFrame` field for the `as.AerospikeError`. Since that was an expensive operation, the client now will consult the value of `StackTracesEnabled` variable before doing so. The default is set to `false` of course.
+  - The client now requires Go v1.23+. Needed to implement iterators later.
 
 - **New Features**
   - [CLIENT-3159] Support writing raw payload to the server.
@@ -14,6 +20,7 @@
 
 - **Improvements**
   - [CLIENT-3214] Support `-use-services-alternate` in test arguments.
+  - Renamed all `interface{}` to `any`.
 
 ## November 29 2024: v7.7.3
 

@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
@@ -461,17 +461,17 @@ var _ = gg.Describe("Aerospike", func() {
 				op5 := as.ListGetByValueRangeOp(binName, nil, as.NewValue(9), as.ListReturnTypeValue)
 				r, err := client.Operate(wpolicy, key, op1, op2, op3, op4, op5)
 				gm.Expect(err).ToNot(gm.HaveOccurred())
-				gm.Expect(r.Bins[binName]).To(gm.Equal([]interface{}{[]interface{}{7, 8}, []interface{}{0, 3, 4, 5}, []interface{}{7, 8, 9, 10}, []interface{}{2, 3, 4, 5}, []interface{}{7, 6, 5, 8}}))
+				gm.Expect(r.Bins[binName]).To(gm.Equal(as.OpResults{[]any{7, 8}, []any{0, 3, 4, 5}, []any{7, 8, 9, 10}, []any{2, 3, 4, 5}, []any{7, 6, 5, 8}}))
 
 				// Remove
 				op6 := as.ListRemoveByValueRangeOp(binName, as.ListReturnTypeIndex, as.NewValue(7), nil)
 				r2, err2 := client.Operate(wpolicy, key, op6)
 				gm.Expect(err2).ToNot(gm.HaveOccurred())
-				gm.Expect(r2.Bins[binName]).To(gm.Equal([]interface{}{0, 3, 4, 5}))
+				gm.Expect(r2.Bins[binName]).To(gm.Equal([]any{0, 3, 4, 5}))
 
 				r3, err3 := client.Get(nil, key)
 				gm.Expect(err3).ToNot(gm.HaveOccurred())
-				gm.Expect(r3.Bins[binName]).To(gm.Equal([]interface{}{6, 5}))
+				gm.Expect(r3.Bins[binName]).To(gm.Equal([]any{6, 5}))
 			})
 
 			gg.It("must return the result with same ordering", func() {
@@ -636,7 +636,7 @@ var _ = gg.Describe("Aerospike", func() {
 
 					for k := 0; k < keyCount; k++ {
 						key, _ := as.NewKey(ns, set, k)
-						args := make(map[interface{}]interface{})
+						args := make(map[any]any)
 						args["bin1_str"] = "a"
 						batchRecords = append(batchRecords, as.NewBatchUDF(
 							nil,
@@ -653,7 +653,7 @@ var _ = gg.Describe("Aerospike", func() {
 					for i := 0; i < keyCount; i++ {
 						gm.Expect(batchRecords[i].BatchRec().Err).To(gm.BeNil())
 						gm.Expect(batchRecords[i].BatchRec().ResultCode).To(gm.Equal(types.OK))
-						gm.Expect(batchRecords[i].BatchRec().Record.Bins).To(gm.Equal(as.BinMap{"SUCCESS": map[interface{}]interface{}{"bin1_str": "a"}}))
+						gm.Expect(batchRecords[i].BatchRec().Record.Bins).To(gm.Equal(as.BinMap{"SUCCESS": map[any]any{"bin1_str": "a"}}))
 					}
 				}
 			})
@@ -676,7 +676,7 @@ var _ = gg.Describe("Aerospike", func() {
 				batchRecords := []as.BatchRecordIfc{}
 
 				key1, _ := as.NewKey(randString(10), set, 1)
-				args := make(map[interface{}]interface{})
+				args := make(map[any]any)
 				args["bin1_str"] = "a"
 				batchRecords = append(batchRecords, as.NewBatchUDF(
 					nil,
@@ -895,7 +895,7 @@ var _ = gg.Describe("Aerospike", func() {
 						gm.Expect(rec.Err).ToNot(gm.HaveOccurred())
 						gm.Expect(rec.ResultCode).To(gm.Equal(types.OK))
 						gm.Expect(rec.InDoubt).To(gm.BeFalse())
-						gm.Expect(rec.Record.Bins["SUCCESS"]).To(gm.Equal(map[interface{}]interface{}{"status": "OK"}))
+						gm.Expect(rec.Record.Bins["SUCCESS"]).To(gm.Equal(map[any]any{"status": "OK"}))
 					}
 
 					recs, err := client.BatchGet(nil, keys)

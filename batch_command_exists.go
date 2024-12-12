@@ -15,8 +15,8 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchCommandExists struct {
@@ -27,7 +27,7 @@ type batchCommandExists struct {
 }
 
 func newBatchCommandExists(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	keys []*Key,
@@ -129,7 +129,7 @@ func (cmd *batchCommandExists) commandType() commandType {
 	return ttBatchRead
 }
 
-func (cmd *batchCommandExists) executeSingle(client clientIfc) Error {
+func (cmd *batchCommandExists) executeSingle(client *Client) Error {
 	var err Error
 	for _, offset := range cmd.batch.offsets {
 		cmd.existsArray[offset], err = client.Exists(&cmd.policy.BasePolicy, cmd.keys[offset])

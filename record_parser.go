@@ -17,9 +17,9 @@ package aerospike
 import (
 	"fmt"
 
-	"github.com/aerospike/aerospike-client-go/v7/logger"
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/logger"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 // Task interface defines methods for asynchronous tasks.
@@ -157,12 +157,9 @@ func (rp *recordParser) parseTranDeadline(txn *Txn) {
 		rp.cmd.dataOffset += int(size)
 	}
 }
-func (rp *recordParser) parseRecord(key *Key, isOperation, useOpResults bool) (*Record, Error) {
+func (rp *recordParser) parseRecord(key *Key, isOperation bool) (*Record, Error) {
 	var bins BinMap
 	receiveOffset := rp.cmd.dataOffset
-
-	// opCmd, isOperation := ifc.(*operateCommand)
-	var binNamesSet []string
 
 	// There can be fields in the response (setname etc).
 	// But for now, ignore them. Expose them to the API if needed in the future.
@@ -202,20 +199,12 @@ func (rp *recordParser) parseRecord(key *Key, isOperation, useOpResults bool) (*
 				} else {
 					// Make a list to store all values.
 					bins[name] = OpResults{prev, value}
-					binNamesSet = append(binNamesSet, name)
 				}
 			} else {
 				bins[name] = value
 			}
 		} else {
 			bins[name] = value
-		}
-	}
-
-	// TODO: Remove this in the next major release
-	if isOperation && !useOpResults {
-		for i := range binNamesSet {
-			bins[binNamesSet[i]] = []interface{}(bins[binNamesSet[i]].(OpResults))
 		}
 	}
 

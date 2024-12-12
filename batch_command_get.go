@@ -17,8 +17,8 @@ package aerospike
 import (
 	"reflect"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchCommandGet struct {
@@ -55,7 +55,7 @@ var batchObjectParser func(
 ) Error
 
 func newBatchCommandGet(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	keys []*Key,
@@ -228,7 +228,7 @@ func (cmd *batchCommandGet) commandType() commandType {
 	return ttBatchRead
 }
 
-func (cmd *batchCommandGet) executeSingle(client clientIfc) Error {
+func (cmd *batchCommandGet) executeSingle(client *Client) Error {
 	for _, offset := range cmd.batch.offsets {
 		var err Error
 		if len(cmd.ops) > 0 {
@@ -238,7 +238,7 @@ func (cmd *batchCommandGet) executeSingle(client clientIfc) Error {
 					return newError(types.PARAMETER_ERROR, "Write operations not allowed in batch read").setNode(cmd.node)
 				}
 			}
-			cmd.records[offset], err = client.operate(cmd.policy.toWritePolicy(), cmd.keys[offset], true, cmd.ops...)
+			cmd.records[offset], err = client.Operate(cmd.policy.toWritePolicy(), cmd.keys[offset], cmd.ops...)
 		} else if (cmd.readAttr & _INFO1_NOBINDATA) == _INFO1_NOBINDATA {
 			cmd.records[offset], err = client.GetHeader(&cmd.policy.BasePolicy, cmd.keys[offset])
 		} else {

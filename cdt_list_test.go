@@ -21,7 +21,7 @@ import (
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
 var _ = gg.Describe("CDT List Test", func() {
@@ -32,7 +32,7 @@ var _ = gg.Describe("CDT List Test", func() {
 	var key *as.Key
 	var wpolicy = as.NewWritePolicy(0, 0)
 	var cdtBinName string
-	var list []interface{}
+	var list []any
 
 	gg.BeforeEach(func() {
 
@@ -52,7 +52,7 @@ var _ = gg.Describe("CDT List Test", func() {
 		gm.Expect(errors.Is(err, as.ErrKeyNotFound)).To(gm.BeTrue())
 		gm.Expect(cdtList).To(gm.BeNil())
 
-		list := []interface{}{}
+		list := []any{}
 		for i := 1; i <= 100; i++ {
 			list = append(list, i)
 
@@ -84,7 +84,7 @@ var _ = gg.Describe("CDT List Test", func() {
 		gm.Expect(err).ToNot(gm.HaveOccurred())
 		gm.Expect(cdtList).ToNot(gm.BeNil())
 		gm.Expect(cdtList.Bins).ToNot(gm.BeNil())
-		gm.Expect(cdtList.Bins[cdtBinName]).To(gm.Equal([]interface{}{4, []interface{}{1, 2, 3, 4}}))
+		gm.Expect(cdtList.Bins[cdtBinName]).To(gm.Equal(as.OpResults{4, []any{1, 2, 3, 4}}))
 	})
 
 	gg.Describe("CDT List Operations", func() {
@@ -96,7 +96,7 @@ var _ = gg.Describe("CDT List Test", func() {
 			_, err = client.Delete(nil, key)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			list = []interface{}{}
+			list = []any{}
 
 			for i := 1; i <= listSize; i++ {
 				list = append(list, i)
@@ -127,31 +127,31 @@ var _ = gg.Describe("CDT List Test", func() {
 		gg.It("should Get the last 3 element", func() {
 			cdtListRes, err := client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, -3, 3))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{listSize - 2, listSize - 1, listSize - 0}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{listSize - 2, listSize - 1, listSize - 0}))
 		})
 
 		gg.It("should Get the from element #7 till the end of list", func() {
 			cdtListRes, err := client.Operate(wpolicy, key, as.ListGetRangeFromOp(cdtBinName, 7))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{listSize - 2, listSize - 1, listSize - 0}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{listSize - 2, listSize - 1, listSize - 0}))
 		})
 
 		gg.It("should Get by value", func() {
 			cdtListRes, err := client.Operate(wpolicy, key, as.ListGetByValueOp(cdtBinName, 7, as.ListReturnTypeValue))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{7}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{7}))
 
-			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByValueListOp(cdtBinName, []interface{}{7, 9}, as.ListReturnTypeIndex))
+			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByValueListOp(cdtBinName, []any{7, 9}, as.ListReturnTypeIndex))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{6, 8}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{6, 8}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByValueRangeOp(cdtBinName, 5, 9, as.ListReturnTypeValue))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{5, 6, 7, 8}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{5, 6, 7, 8}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByValueRangeOp(cdtBinName, 5, 9, as.ListReturnTypeIndex))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{4, 5, 6, 7}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{4, 5, 6, 7}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByValueRangeOp(cdtBinName, 5, 9, as.ListReturnTypeExists))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -165,19 +165,19 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByIndexRangeOp(cdtBinName, 7, as.ListReturnTypeIndex))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{7, 8, 9}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{7, 8, 9}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByIndexRangeOp(cdtBinName, 7, as.ListReturnTypeValue))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{8, 9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{8, 9, 10}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByIndexRangeOp(cdtBinName, 8, as.ListReturnTypeValue))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{9, 10}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByIndexRangeCountOp(cdtBinName, 5, 2, as.ListReturnTypeValue))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{6, 7}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{6, 7}))
 		})
 
 		gg.It("should Get by rank", func() {
@@ -187,19 +187,19 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByRankRangeOp(cdtBinName, 7, as.ListReturnTypeIndex))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{7, 8, 9}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{7, 8, 9}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByRankRangeOp(cdtBinName, 7, as.ListReturnTypeValue))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{8, 9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{8, 9, 10}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByRankRangeOp(cdtBinName, 8, as.ListReturnTypeValue))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{9, 10}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetByRankRangeCountOp(cdtBinName, 5, 2, as.ListReturnTypeValue))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{6, 7}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{6, 7}))
 		})
 
 		gg.It("should append an element to the tail", func() {
@@ -232,7 +232,7 @@ var _ = gg.Describe("CDT List Test", func() {
 		})
 
 		gg.It("should append a few elements to the tail", func() {
-			elems := []interface{}{math.MaxInt64, math.MaxInt64 - 1, math.MaxInt64 - 2}
+			elems := []any{math.MaxInt64, math.MaxInt64 - 1, math.MaxInt64 - 2}
 			cdtListRes, err := client.Operate(wpolicy, key, as.ListAppendOp(cdtBinName, elems...))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal(listSize + 3))
@@ -243,7 +243,7 @@ var _ = gg.Describe("CDT List Test", func() {
 		})
 
 		gg.It("should append a few elements to the tail with policy", func() {
-			elems := []interface{}{math.MaxInt64, math.MaxInt64 - 1, math.MaxInt64 - 2}
+			elems := []any{math.MaxInt64, math.MaxInt64 - 1, math.MaxInt64 - 2}
 			cdtListRes, err := client.Operate(wpolicy, key, as.ListAppendWithPolicyOp(as.DefaultListPolicy(), cdtBinName, elems...))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal(listSize + 3))
@@ -279,11 +279,11 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{math.MaxInt64 - 1, math.MaxInt64 - 2, math.MaxInt64, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{math.MaxInt64 - 1, math.MaxInt64 - 2, math.MaxInt64, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}))
 		})
 
 		gg.It("should prepend a few elements to the tail via ListInsertOp", func() {
-			elems := []interface{}{math.MaxInt64, math.MaxInt64 - 1, math.MaxInt64 - 2}
+			elems := []any{math.MaxInt64, math.MaxInt64 - 1, math.MaxInt64 - 2}
 			cdtListRes, err := client.Operate(wpolicy, key, as.ListInsertOp(cdtBinName, 0, elems...))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal(listSize + 3))
@@ -387,13 +387,13 @@ var _ = gg.Describe("CDT List Test", func() {
 		})
 
 		gg.It("should remove elements by value", func() {
-			cdtListRes, err := client.Operate(wpolicy, key, as.ListRemoveByValueListOp(cdtBinName, []interface{}{1, 2, 3, 4, 5, 6, 7}, as.ListReturnTypeValue))
+			cdtListRes, err := client.Operate(wpolicy, key, as.ListRemoveByValueListOp(cdtBinName, []any{1, 2, 3, 4, 5, 6, 7}, as.ListReturnTypeValue))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{1, 2, 3, 4, 5, 6, 7}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{1, 2, 3, 4, 5, 6, 7}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{8, 9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{8, 9, 10}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListRemoveByValueOp(cdtBinName, 9, as.ListReturnTypeCount))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -401,17 +401,17 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{8, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{8, 10}))
 		})
 
 		gg.It("should remove elements by value range", func() {
 			cdtListRes, err := client.Operate(wpolicy, key, as.ListRemoveByValueRangeOp(cdtBinName, as.ListReturnTypeValue, 1, 5))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{1, 2, 3, 4}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{1, 2, 3, 4}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{5, 6, 7, 8, 9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{5, 6, 7, 8, 9, 10}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListRemoveByValueRangeOp(cdtBinName, as.ListReturnTypeCount, 6, 9))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -419,7 +419,7 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{5, 9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{5, 9, 10}))
 		})
 
 		gg.It("should remove elements by index", func() {
@@ -429,7 +429,7 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{2, 3, 4, 5, 6, 7, 8, 9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{2, 3, 4, 5, 6, 7, 8, 9, 10}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListRemoveByIndexRangeOp(cdtBinName, 5, as.ListReturnTypeCount))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -437,7 +437,7 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{2, 3, 4, 5, 6}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{2, 3, 4, 5, 6}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListRemoveByIndexRangeCountOp(cdtBinName, 2, 3, as.ListReturnTypeCount))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -445,7 +445,7 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{2, 3}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{2, 3}))
 		})
 
 		gg.It("should remove elements by rank", func() {
@@ -458,7 +458,7 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{2, 3, 4, 5, 6, 7, 8, 9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{2, 3, 4, 5, 6, 7, 8, 9, 10}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListRemoveByRankRangeOp(cdtBinName, 5, as.ListReturnTypeCount))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -466,7 +466,7 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{2, 3, 4, 5, 6}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{2, 3, 4, 5, 6}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListRemoveByRankRangeCountOp(cdtBinName, 2, 3, as.ListReturnTypeCount))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -474,7 +474,7 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeOp(cdtBinName, 0, -1))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{2, 3}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{2, 3}))
 		})
 
 		gg.It("should increment elements", func() {
@@ -528,18 +528,18 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtListRes, err := client.Operate(wpolicy, key, as.ListGetRangeFromOp(cdtBinName, 0))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{101, 2, 3, 4, 5, 6, 7, 8, 9, 10}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{101, 2, 3, 4, 5, 6, 7, 8, 9, 10}))
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListSortOp(cdtBinName, as.ListSortFlagsDefault))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
 			cdtListRes, err = client.Operate(wpolicy, key, as.ListGetRangeFromOp(cdtBinName, 0))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]interface{}{2, 3, 4, 5, 6, 7, 8, 9, 10, 101}))
+			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal([]any{2, 3, 4, 5, 6, 7, 8, 9, 10, 101}))
 		})
 
 		gg.It("should set elements", func() {
-			elems := []interface{}{}
+			elems := []any{}
 			for i := 0; i < listSize; i++ {
 				cdtListRes, err := client.Operate(wpolicy, key, as.ListSetOp(cdtBinName, i, math.MaxInt64))
 				gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -564,7 +564,7 @@ var _ = gg.Describe("CDT List Test", func() {
 		})
 
 		gg.It("should trim list elements", func() {
-			elems := []interface{}{3, 4, 5}
+			elems := []any{3, 4, 5}
 			cdtListRes, err := client.Operate(wpolicy, key, as.ListTrimOp(cdtBinName, 2, 3))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 			gm.Expect(cdtListRes.Bins[cdtBinName]).To(gm.Equal(7))
@@ -601,7 +601,7 @@ var _ = gg.Describe("CDT List Test", func() {
 
 			cdtBinName2 := cdtBinName + "2"
 
-			list := []interface{}{0, 4, 5, 9, 9, 11, 15, 0}
+			list := []any{0, 4, 5, 9, 9, 11, 15, 0}
 
 			cdtListPolicy1 := as.NewListPolicy(as.ListOrderOrdered, as.ListWriteFlagsAddUnique|as.ListWriteFlagsPartial|as.ListWriteFlagsNoFail)
 			cdtListPolicy2 := as.NewListPolicy(as.ListOrderOrdered, as.ListWriteFlagsAddUnique|as.ListWriteFlagsNoFail)
@@ -614,7 +614,7 @@ var _ = gg.Describe("CDT List Test", func() {
 			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal(6))
 			gm.Expect(record.Bins[cdtBinName2]).To(gm.Equal(0))
 
-			list = []interface{}{11, 3}
+			list = []any{11, 3}
 
 			record, err = client.Operate(wpolicy, key,
 				as.ListAppendWithPolicyOp(cdtListPolicy1, cdtBinName, list...),
@@ -630,7 +630,7 @@ var _ = gg.Describe("CDT List Test", func() {
 		gg.It("should support Relative GetList Ops", func() {
 			client.Delete(nil, key)
 
-			list := []interface{}{0, 4, 5, 9, 11, 15}
+			list := []any{0, 4, 5, 9, 11, 15}
 
 			cdtListPolicy := as.NewListPolicy(as.ListOrderOrdered, as.ListWriteFlagsDefault)
 			record, err := client.Operate(wpolicy, key,
@@ -650,13 +650,13 @@ var _ = gg.Describe("CDT List Test", func() {
 			)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal([]interface{}{6, []interface{}{5, 9, 11, 15}, []interface{}{9, 11, 15}, []interface{}{4, 5, 9, 11, 15}, []interface{}{4, 5, 9, 11, 15}, []interface{}{11, 15}, []interface{}{0, 4, 5, 9, 11, 15}, []interface{}{5, 9}, []interface{}{9}, []interface{}{4, 5}, []interface{}{4}, []interface{}{11, 15}, []interface{}{}}))
+			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal(as.OpResults{6, []any{5, 9, 11, 15}, []any{9, 11, 15}, []any{4, 5, 9, 11, 15}, []any{4, 5, 9, 11, 15}, []any{11, 15}, []any{0, 4, 5, 9, 11, 15}, []any{5, 9}, []any{9}, []any{4, 5}, []any{4}, []any{11, 15}, []any{}}))
 		})
 
 		gg.It("should support Relative RemoveList Ops", func() {
 			client.Delete(nil, key)
 
-			list := []interface{}{0, 4, 5, 9, 11, 15}
+			list := []any{0, 4, 5, 9, 11, 15}
 
 			cdtListPolicy := as.NewListPolicy(as.ListOrderOrdered, as.ListWriteFlagsDefault)
 			record, err := client.Operate(wpolicy, key,
@@ -670,13 +670,13 @@ var _ = gg.Describe("CDT List Test", func() {
 			)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal([]interface{}{6, []interface{}{5, 9, 11, 15}, []interface{}{}, []interface{}{4}, []interface{}{}, []interface{}{}, []interface{}{0}}))
+			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal(as.OpResults{6, []any{5, 9, 11, 15}, []any{}, []any{4}, []any{}, []any{}, []any{0}}))
 		})
 
 		gg.It("should support List Infinity Ops", func() {
 			client.Delete(nil, key)
 
-			list := []interface{}{0, 4, 5, 9, 11, 15}
+			list := []any{0, 4, 5, 9, 11, 15}
 
 			cdtListPolicy := as.NewListPolicy(as.ListOrderOrdered, as.ListWriteFlagsDefault)
 			record, err := client.Operate(wpolicy, key,
@@ -685,34 +685,34 @@ var _ = gg.Describe("CDT List Test", func() {
 			)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal([]interface{}{6, []interface{}{11, 15}}))
+			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal(as.OpResults{6, []any{11, 15}}))
 		})
 
 		gg.It("should support List WildCard Ops", func() {
 			client.Delete(nil, key)
 
-			list := []interface{}{
-				[]interface{}{"John", 55},
-				[]interface{}{"Jim", 95},
-				[]interface{}{"Joe", 80},
+			list := []any{
+				[]any{"John", 55},
+				[]any{"Jim", 95},
+				[]any{"Joe", 80},
 			}
 
 			cdtListPolicy := as.NewListPolicy(as.ListOrderOrdered, as.ListWriteFlagsDefault)
 			record, err := client.Operate(wpolicy, key,
 				as.ListAppendWithPolicyOp(cdtListPolicy, cdtBinName, list...),
-				as.ListGetByValueOp(cdtBinName, []interface{}{"Jim", as.NewWildCardValue()}, as.ListReturnTypeValue),
+				as.ListGetByValueOp(cdtBinName, []any{"Jim", as.NewWildCardValue()}, as.ListReturnTypeValue),
 			)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
-			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal([]interface{}{3, []interface{}{[]interface{}{"Jim", 95}}}))
+			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal(as.OpResults{3, []any{[]any{"Jim", 95}}}))
 		})
 
 		gg.It("should support Nested List Ops", func() {
 			client.Delete(nil, key)
 
-			list := []interface{}{
-				[]interface{}{7, 9, 5},
-				[]interface{}{1, 2, 3},
-				[]interface{}{6, 5, 4, 1},
+			list := []any{
+				[]any{7, 9, 5},
+				[]any{1, 2, 3},
+				[]any{6, 5, 4, 1},
 			}
 
 			err := client.Put(wpolicy, key, as.BinMap{cdtBinName: list})
@@ -725,12 +725,12 @@ var _ = gg.Describe("CDT List Test", func() {
 			record, err = client.Operate(wpolicy, key, as.ListAppendWithPolicyContextOp(as.DefaultListPolicy(), cdtBinName, []*as.CDTContext{as.CtxListIndex(-1)}, 11), as.GetBinOp(cdtBinName))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal([]interface{}{
+			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal(as.OpResults{
 				5,
-				[]interface{}{
-					[]interface{}{7, 9, 5},
-					[]interface{}{1, 2, 3},
-					[]interface{}{6, 5, 4, 1, 11},
+				[]any{
+					[]any{7, 9, 5},
+					[]any{1, 2, 3},
+					[]any{6, 5, 4, 1, 11},
 				},
 			}))
 		})
@@ -738,15 +738,15 @@ var _ = gg.Describe("CDT List Test", func() {
 		gg.It("should support Nested List Map Ops", func() {
 			client.Delete(nil, key)
 
-			m := map[interface{}]interface{}{
-				"key1": []interface{}{
-					[]interface{}{7, 9, 5},
-					[]interface{}{13},
+			m := map[any]any{
+				"key1": []any{
+					[]any{7, 9, 5},
+					[]any{13},
 				},
-				"key2": []interface{}{
-					[]interface{}{9},
-					[]interface{}{2, 4},
-					[]interface{}{6, 1, 9},
+				"key2": []any{
+					[]any{9},
+					[]any{2, 4},
+					[]any{6, 1, 9},
 				},
 			}
 
@@ -760,17 +760,17 @@ var _ = gg.Describe("CDT List Test", func() {
 			record, err = client.Operate(wpolicy, key, as.ListAppendWithPolicyContextOp(as.DefaultListPolicy(), cdtBinName, []*as.CDTContext{as.CtxMapKey(as.StringValue("key2")), as.CtxListRank(0)}, 11), as.GetBinOp(cdtBinName))
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal([]interface{}{
+			gm.Expect(record.Bins[cdtBinName]).To(gm.Equal(as.OpResults{
 				3,
-				map[interface{}]interface{}{
-					"key1": []interface{}{
-						[]interface{}{7, 9, 5},
-						[]interface{}{13},
+				map[any]any{
+					"key1": []any{
+						[]any{7, 9, 5},
+						[]any{13},
 					},
-					"key2": []interface{}{
-						[]interface{}{9},
-						[]interface{}{2, 4, 11},
-						[]interface{}{6, 1, 9},
+					"key2": []any{
+						[]any{9},
+						[]any{2, 4, 11},
+						[]any{6, 1, 9},
 					},
 				}}))
 		})
@@ -781,7 +781,7 @@ var _ = gg.Describe("CDT List Test", func() {
 			l1 := []as.Value{as.IntegerValue(7), as.IntegerValue(9), as.IntegerValue(5)}
 			l2 := []as.Value{as.IntegerValue(1), as.IntegerValue(2), as.IntegerValue(3)}
 			l3 := []as.Value{as.IntegerValue(6), as.IntegerValue(5), as.IntegerValue(4), as.IntegerValue(1)}
-			inputList := []interface{}{as.ValueArray(l1), as.ValueArray(l2), as.ValueArray(l3)}
+			inputList := []any{as.ValueArray(l1), as.ValueArray(l2), as.ValueArray(l3)}
 
 			// Create list.
 			record, err := client.Operate(nil, key,
@@ -797,16 +797,16 @@ var _ = gg.Describe("CDT List Test", func() {
 			)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
-			results := record.Bins[cdtBinName].([]interface{})
+			results := record.Bins[cdtBinName].(as.OpResults)
 
 			count := results[0]
 			gm.Expect(count).To(gm.Equal(1))
 
-			list := results[1].([]interface{})
+			list := results[1].([]any)
 			gm.Expect(len(list)).To(gm.Equal(4))
 
 			// Test last nested list.
-			list = list[1].([]interface{})
+			list = list[1].([]any)
 			gm.Expect(len(list)).To(gm.Equal(1))
 			gm.Expect(list[0]).To(gm.Equal(2))
 		})

@@ -18,14 +18,15 @@ import (
 	"encoding/json"
 	"sync"
 
-	iatomic "github.com/aerospike/aerospike-client-go/v7/internal/atomic"
-	hist "github.com/aerospike/aerospike-client-go/v7/types/histogram"
+	iatomic "github.com/aerospike/aerospike-client-go/v8/internal/atomic"
+	hist "github.com/aerospike/aerospike-client-go/v8/types/histogram"
 )
 
 // nodeStats keeps track of client's internal node statistics
 // These statistics are aggregated once per tend in the cluster object
 // and then are served to the end-user.
 type nodeStats struct {
+	// TODO: Remove this lock and abstract it out using Generics
 	m sync.Mutex
 	// Attempts to open a connection (failed + successful)
 	ConnectionsAttempts iatomic.Int `json:"connections-attempts"`

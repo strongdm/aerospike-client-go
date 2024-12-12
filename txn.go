@@ -19,8 +19,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	sm "github.com/aerospike/aerospike-client-go/v7/internal/atomic/map"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	sm "github.com/aerospike/aerospike-client-go/v8/internal/atomic/map"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 // MRT state.

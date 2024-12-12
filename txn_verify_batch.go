@@ -17,8 +17,8 @@ package aerospike
 import (
 	"reflect"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type txnBatchVerifyCommand struct {
@@ -30,7 +30,7 @@ type txnBatchVerifyCommand struct {
 }
 
 func newTxnBatchVerifyCommand(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	keys []*Key,
@@ -175,7 +175,7 @@ func (cmd *txnBatchVerifyCommand) commandType() commandType {
 	return ttBatchRead
 }
 
-func (cmd *txnBatchVerifyCommand) executeSingle(client clientIfc) Error {
+func (cmd *txnBatchVerifyCommand) executeSingle(client *Client) Error {
 	panic(unreachable)
 }
 

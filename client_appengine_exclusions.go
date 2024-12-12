@@ -22,8 +22,8 @@ import (
 
 	"golang.org/x/sync/semaphore"
 
-	lualib "github.com/aerospike/aerospike-client-go/v7/internal/lua"
-	"github.com/aerospike/aerospike-client-go/v7/logger"
+	lualib "github.com/aerospike/aerospike-client-go/v8/internal/lua"
+	"github.com/aerospike/aerospike-client-go/v8/logger"
 	lua "github.com/yuin/gopher-lua"
 )
 

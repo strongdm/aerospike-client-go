@@ -17,8 +17,8 @@ package aerospike
 import (
 	"encoding/base64"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	ParticleType "github.com/aerospike/aerospike-client-go/v7/types/particle_type"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	ParticleType "github.com/aerospike/aerospike-client-go/v8/types/particle_type"
 )
 
 // ExpressionArgument is used for passing arguments to filter expressions.
@@ -653,7 +653,6 @@ func ExpBinExists(name string) *Expression {
 //	LDT     = 21
 //	GEOJSON = 23
 func ExpBinType(name string) *Expression {
-	// TODO: Improve documentation and provide examples.
 	return newFilterExpression(
 		&expOpBIN_TYPE,
 		StringValue(name),

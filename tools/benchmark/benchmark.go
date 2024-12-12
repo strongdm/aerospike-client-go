@@ -32,9 +32,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	asl "github.com/aerospike/aerospike-client-go/v7/logger"
-	ast "github.com/aerospike/aerospike-client-go/v7/types"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	asl "github.com/aerospike/aerospike-client-go/v8/logger"
+	ast "github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 // TStats is a goroutine's statistics values
@@ -170,17 +170,14 @@ func main() {
 	dbHost := as.NewHost(*host, *port)
 	dbHost.TLSName = *tlsName
 
-	var client as.ClientIfc
-	nclient, err := as.NewClientWithPolicyAndHost(clientPolicy, dbHost)
+	client, err := as.NewClientWithPolicyAndHost(clientPolicy, dbHost)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	cc, _ := nclient.WarmUp(*warmUp)
+	cc, _ := client.WarmUp(*warmUp)
 	logger.Printf("Warm-up conns.:\t%d", cc)
-	logger.Println("Nodes Found:", nclient.GetNodeNames())
-
-	client = nclient
+	logger.Println("Nodes Found:", client.GetNodeNames())
 
 	go reporter()
 
@@ -410,7 +407,7 @@ func incOnError(op, timeout *int, err error) {
 	}
 }
 
-func runBench_I(client as.ClientIfc, ident int, times int) {
+func runBench_I(client *as.Client, ident int, times int) {
 	defer wg.Done()
 
 	xr := NewXorRand()
@@ -519,7 +516,7 @@ func runBench_I(client as.ClientIfc, ident int, times int) {
 	countReportChan <- &TStats{false, WCount, 0, writeErr, 0, writeTOErr, 0, wMinLat, wMaxLat, 0, 0, wLatTotal, 0, wLatList, nil}
 }
 
-func runBench_RU(client as.ClientIfc, ident int, times int) {
+func runBench_RU(client *as.Client, ident int, times int) {
 	defer wg.Done()
 
 	xr := NewXorRand()

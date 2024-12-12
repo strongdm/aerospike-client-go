@@ -14,17 +14,16 @@
 
 package aerospike
 
-import "github.com/aerospike/aerospike-client-go/v7/types"
+import "github.com/aerospike/aerospike-client-go/v8/types"
 
 type operateCommandWrite struct {
 	baseWriteCommand
 
-	record       *Record
-	args         operateArgs
-	useOpResults bool
+	record *Record
+	args   operateArgs
 }
 
-func newOperateCommandWrite(cluster *Cluster, key *Key, args operateArgs, useOpResults bool) (operateCommandWrite, Error) {
+func newOperateCommandWrite(cluster *Cluster, key *Key, args operateArgs) (operateCommandWrite, Error) {
 	bwc, err := newBaseWriteCommand(cluster, args.writePolicy, key)
 	if err != nil {
 		return operateCommandWrite{}, err
@@ -33,7 +32,6 @@ func newOperateCommandWrite(cluster *Cluster, key *Key, args operateArgs, useOpR
 	return operateCommandWrite{
 		baseWriteCommand: bwc,
 		args:             args,
-		useOpResults:     useOpResults,
 	}, nil
 }
 
@@ -54,7 +52,7 @@ func (cmd *operateCommandWrite) parseResult(ifc command, conn *Connection) Error
 	switch rp.resultCode {
 	case types.OK:
 		var err Error
-		cmd.record, err = rp.parseRecord(cmd.key, true, cmd.useOpResults)
+		cmd.record, err = rp.parseRecord(cmd.key, true)
 		if err != nil {
 			return err
 		}

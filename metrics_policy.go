@@ -15,7 +15,7 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types/histogram"
+	"github.com/aerospike/aerospike-client-go/v8/types/histogram"
 )
 
 // MetricsPolicy specifies client periodic metrics configuration.

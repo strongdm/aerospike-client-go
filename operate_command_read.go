@@ -20,7 +20,7 @@ type operateCommandRead struct {
 	args operateArgs
 }
 
-func newOperateCommandRead(cluster *Cluster, key *Key, args operateArgs, useOpResults bool) (operateCommandRead, Error) {
+func newOperateCommandRead(cluster *Cluster, key *Key, args operateArgs) (operateCommandRead, Error) {
 	rdCommand, err := newReadCommand(cluster, &args.writePolicy.BasePolicy, key, nil)
 	if err != nil {
 		return operateCommandRead{}, err
@@ -31,7 +31,6 @@ func newOperateCommandRead(cluster *Cluster, key *Key, args operateArgs, useOpRe
 		args:        args,
 	}
 
-	res.useOpResults = useOpResults
 	res.isOperation = true
 
 	return res, nil

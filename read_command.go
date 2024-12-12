@@ -15,15 +15,14 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 type readCommand struct {
 	baseReadCommand
 
-	binNames     []string
-	isOperation  bool
-	useOpResults bool
+	binNames    []string
+	isOperation bool
 }
 
 func newReadCommand(
@@ -75,7 +74,7 @@ func (cmd *readCommand) parseResult(ifc command, conn *Connection) Error {
 		}
 
 		var err Error
-		cmd.record, err = rp.parseRecord(cmd.key, cmd.isOperation, cmd.useOpResults)
+		cmd.record, err = rp.parseRecord(cmd.key, cmd.isOperation)
 		if err != nil {
 			return err
 		}

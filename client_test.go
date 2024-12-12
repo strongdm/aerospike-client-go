@@ -24,10 +24,10 @@ import (
 	"strings"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v7"
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	ast "github.com/aerospike/aerospike-client-go/v7/types"
-	asub "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	as "github.com/aerospike/aerospike-client-go/v8"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	ast "github.com/aerospike/aerospike-client-go/v8/types"
+	asub "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 
 	gg "github.com/onsi/ginkgo/v2"
 	gm "github.com/onsi/gomega"

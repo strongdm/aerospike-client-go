@@ -15,8 +15,8 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchCommandUDF struct {
@@ -32,7 +32,7 @@ type batchCommandUDF struct {
 }
 
 func newBatchCommandUDF(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	batchUDFPolicy *BatchUDFPolicy,
@@ -183,7 +183,7 @@ func (cmd *batchCommandUDF) isRead() bool {
 	return !cmd.attr.hasWrite
 }
 
-func (cmd *batchCommandUDF) executeSingle(client clientIfc) Error {
+func (cmd *batchCommandUDF) executeSingle(client *Client) Error {
 	for i, key := range cmd.keys {
 		policy := cmd.batchUDFPolicy.toWritePolicy(cmd.policy)
 		policy.RespondPerEachOp = true

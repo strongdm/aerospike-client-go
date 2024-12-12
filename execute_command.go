@@ -15,8 +15,8 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/logger"
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/logger"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
 type executeCommand struct {
@@ -70,7 +70,7 @@ func (cmd *executeCommand) parseResult(ifc command, conn *Connection) Error {
 		} else if rp.resultCode == types.FILTERED_OUT {
 			return ErrFilteredOut.err()
 		} else if rp.resultCode == types.UDF_BAD_RESPONSE {
-			cmd.record, _ = rp.parseRecord(cmd.key, false, false)
+			cmd.record, _ = rp.parseRecord(cmd.key, false)
 			err := cmd.handleUdfError(rp.resultCode)
 			logger.Logger.Debug("UDF execution error: " + err.Error())
 			return err
@@ -85,7 +85,7 @@ func (cmd *executeCommand) parseResult(ifc command, conn *Connection) Error {
 		return nil
 	}
 
-	cmd.record, err = rp.parseRecord(cmd.key, false, false)
+	cmd.record, err = rp.parseRecord(cmd.key, false)
 	if err != nil {
 		return err
 	}

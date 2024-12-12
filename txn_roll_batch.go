@@ -17,8 +17,8 @@ package aerospike
 import (
 	"reflect"
 
-	"github.com/aerospike/aerospike-client-go/v7/types"
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	"github.com/aerospike/aerospike-client-go/v8/types"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 type batchTxnRollCommand struct {
@@ -31,7 +31,7 @@ type batchTxnRollCommand struct {
 }
 
 func newBatchTxnRollCommand(
-	client clientIfc,
+	client *Client,
 	batch *batchNode,
 	policy *BatchPolicy,
 	txn *Txn,
@@ -193,7 +193,7 @@ func (cmd *batchTxnRollCommand) commandType() commandType {
 	return ttBatchWrite
 }
 
-func (cmd *batchTxnRollCommand) executeSingle(client clientIfc) Error {
+func (cmd *batchTxnRollCommand) executeSingle(client *Client) Error {
 	panic(unreachable)
 }
 

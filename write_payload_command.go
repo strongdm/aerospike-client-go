@@ -15,9 +15,9 @@
 package aerospike
 
 import (
-	"github.com/aerospike/aerospike-client-go/v7/types"
+	"github.com/aerospike/aerospike-client-go/v8/types"
 
-	Buffer "github.com/aerospike/aerospike-client-go/v7/utils/buffer"
+	Buffer "github.com/aerospike/aerospike-client-go/v8/utils/buffer"
 )
 
 // guarantee writePayloadCommand implements command interface

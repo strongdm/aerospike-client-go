@@ -15,7 +15,7 @@
 The aerospike package can be imported into your project via:
 
 ```go
-  import as "github.com/aerospike/aerospike-client-go/v7"
+  import as "github.com/aerospike/aerospike-client-go/v8"
 ```
 
 <a name="structs"></a>
@@ -81,7 +81,7 @@ key
 -->
 <a name="key"></a>
 
-### NewKey(ns, set string, key interface{}): *
+### NewKey(ns, set string, key any): *
 
 Creates a new [key object](datamodel.md#key) with the provided arguments.
 
