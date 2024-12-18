@@ -1258,6 +1258,161 @@ func (cmd *baseCommand) setBatchOperateIfcOffsets(
 
 }
 
+func (cmd *baseCommand) setBatchOperateRead(
+	client *Client,
+	policy *BatchPolicy,
+	records []*BatchRead,
+	batch *batchNode,
+) (*batchAttr, Error) {
+	offsets := newBatchOffsetsNative(batch)
+	return cmd.setBatchOperateReadOffsets(client, policy, records, offsets)
+}
+
+func (cmd *baseCommand) setBatchOperateReadOffsets(
+	client *Client,
+	policy *BatchPolicy,
+	records []*BatchRead,
+	offsets BatchOffsets,
+) (*batchAttr, Error) {
+	max := offsets.size()
+	txn := policy.Txn
+	var versions []*uint64
+
+	// Estimate buffer size
+	cmd.begin()
+
+	if txn != nil {
+		versions = make([]*uint64, max)
+
+		for i := 0; i < max; i++ {
+			offset := offsets.get(i)
+			record := records[offset]
+			versions[i] = txn.GetReadVersion(record.key())
+		}
+	}
+
+	fieldCount := 1
+	predSize := 0
+	if policy.FilterExpression != nil {
+		var err Error
+		predSize, err = cmd.estimateExpressionSize(policy.FilterExpression)
+		if err != nil {
+			return nil, err
+		}
+		if predSize > 0 {
+			fieldCount++
+		}
+	}
+	cmd.dataOffset += predSize
+
+	cmd.dataOffset += int(_FIELD_HEADER_SIZE) + 5
+
+	var prev BatchRecordIfc
+	var verPrev *uint64
+	for i := 0; i < max; i++ {
+		record := records[offsets.get(i)]
+		key := record.key()
+
+		var ver *uint64
+		if len(versions) > 0 {
+			ver = versions[i]
+		}
+
+		cmd.dataOffset += len(key.digest) + 4
+
+		// Try reference equality in hope that namespace/set for all keys is set from fixed variables.
+		// if !policy.SendKey && prev != nil && prev.key().namespace == key.namespace && (prev.key().setName == key.setName) && record.equals(prev) {
+		if canRepeat(policy, key, record, prev, ver, verPrev) {
+			// Can set repeat previous namespace/bin names to save space.
+			cmd.dataOffset++
+		} else {
+			// Must write full header and namespace/set/bin names.
+			cmd.dataOffset += 12 // header(4) + ttl(4) + fielCount(2) + opCount(2) = 12
+			cmd.dataOffset += len(key.namespace) + int(_FIELD_HEADER_SIZE)
+			cmd.dataOffset += len(key.setName) + int(_FIELD_HEADER_SIZE)
+			cmd.sizeTxnBatch(txn, ver, record.BatchRec().hasWrite)
+			if sz, err := record.size(&policy.BasePolicy); err != nil {
+				return nil, err
+			} else {
+				cmd.dataOffset += sz
+			}
+
+			prev = record
+			verPrev = ver
+		}
+
+	}
+
+	if err := cmd.sizeBuffer(policy.compress()); err != nil {
+		return nil, err
+	}
+
+	cmd.writeBatchHeader(policy, fieldCount)
+
+	if policy.FilterExpression != nil {
+		if err := cmd.writeFilterExpression(policy.FilterExpression, predSize); err != nil {
+			return nil, err
+		}
+	}
+
+	// Write real field size.
+	fieldSizeOffset := cmd.dataOffset
+	cmd.writeFieldHeader(0, BATCH_INDEX)
+
+	cmd.WriteUint32(uint32(max))
+
+	cmd.WriteByte(cmd.getBatchFlags(policy))
+
+	attr := &batchAttr{}
+	prev = nil
+	verPrev = nil
+	for i := 0; i < max; i++ {
+		index := offsets.get(i)
+		cmd.WriteUint32(uint32(index))
+
+		record := records[index]
+
+		var ver *uint64
+		if len(versions) > 0 {
+			ver = versions[i]
+		}
+
+		key := record.key()
+		if _, err := cmd.Write(key.digest[:]); err != nil {
+			return nil, newCommonError(err)
+		}
+
+		// Try reference equality in hope that namespace/set for all keys is set from fixed variables.
+		// if !policy.SendKey && prev != nil && prev.key().namespace == key.namespace && prev.key().setName == key.setName && record.equals(prev) {
+		if canRepeat(policy, key, record, prev, ver, verPrev) {
+			// Can set repeat previous namespace/bin names to save space.
+			cmd.WriteByte(_BATCH_MSG_REPEAT) // repeat
+		} else {
+			// Write full message.
+			attr.setBatchRead(client.getUsableBatchReadPolicy(record.Policy))
+			if len(record.BinNames) > 0 {
+				cmd.writeBatchBinNames(key, txn, ver, record.BinNames, attr, attr.filterExp)
+			} else if record.Ops != nil {
+				attr.adjustRead(record.Ops)
+				cmd.writeBatchOperations(key, txn, ver, record.Ops, attr, attr.filterExp)
+			} else {
+				attr.adjustReadForAllBins(record.ReadAllBins)
+				cmd.writeBatchRead(key, txn, ver, attr, attr.filterExp, 0)
+			}
+
+			prev = record
+			verPrev = ver
+		}
+	}
+
+	cmd.WriteUint32At(uint32(cmd.dataOffset)-uint32(_MSG_TOTAL_HEADER_SIZE)-4, fieldSizeOffset)
+	cmd.end()
+	cmd.markCompressed(policy)
+
+	return attr, nil
+
+}
+
 func (cmd *baseCommand) setBatchOperate(
 	policy *BatchPolicy,
 	keys []*Key,
