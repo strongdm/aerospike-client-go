@@ -2198,7 +2198,13 @@ func (cmd *baseCommand) writeBatchFieldsTxn(
 	}
 
 	if filter != nil {
-		filter.pack(cmd)
+		expSize, err := filter.size()
+		if err != nil {
+			return err
+		}
+		if err := cmd.writeFilterExpression(filter, expSize); err != nil {
+			return err
+		}
 	}
 
 	if attr.sendKey && key.hasValueToSend() {
@@ -2243,7 +2249,13 @@ func (cmd *baseCommand) writeBatchFieldsReg(
 	cmd.writeBatchFields(key, fieldCount, opCount)
 
 	if filter != nil {
-		filter.pack(cmd)
+		expSize, err := filter.size()
+		if err != nil {
+			return err
+		}
+		if err := cmd.writeFilterExpression(filter, expSize); err != nil {
+			return err
+		}
 	}
 
 	if attr.sendKey && key.hasValueToSend() {
@@ -3113,7 +3125,13 @@ func (cmd *baseCommand) writeKeyAttr(
 	cmd.writeKeyWithPolicy(policy.GetBasePolicy(), key, attr.hasWrite)
 
 	if filterExp != nil {
-		filterExp.pack(cmd)
+		expSize, err := filterExp.size()
+		if err != nil {
+			return err
+		}
+		if err := cmd.writeFilterExpression(filterExp, expSize); err != nil {
+			return err
+		}
 	}
 	return nil
 }
