@@ -1,5 +1,13 @@
 # Change History
 
+## December 20 2024: v8.0.0-beta.2
+
+- **New Features**
+  - [CLIENT-2820] Actively refresh pool connections that will be idle before the next tend.
+
+- **Fixes**
+  - [CLIENT-3218] Fix FilterExpression encoding in Batch commands.
+
 ## December 13 2024: v8.0.0-beta.1
 
   Major breaking release. This release supports Multi-Record Transactions. Please note that this is a beta release and will be subject to breaking changes.
