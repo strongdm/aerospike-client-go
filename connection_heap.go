@@ -17,6 +17,7 @@ package aerospike
 import (
 	"runtime"
 	"sync"
+	"time"
 )
 
 // singleConnectionHeap is a non-blocking LIFO heap.
@@ -142,6 +143,49 @@ func (h *singleConnectionHeap) DropIdleTail() bool {
 	return false
 }
 
+// RefreshIdleTail closes idle connection in tail.
+// It will return true if tail connection was idle and dropped
+func (h *singleConnectionHeap) RefreshIdleTail(tendInterval time.Duration) bool {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	// the heap has been cleaned up
+	if h.data == nil {
+		return false
+	}
+
+	// if heap is not empty
+	if h.full || (h.tail != h.head) {
+		conn := h.data[(h.tail+1)%h.size]
+
+		if conn.IsConnected() && conn.willBeIdleIn(tendInterval+time.Second) {
+			h.tail = (h.tail + 1) % h.size
+			h.data[h.tail] = nil
+			h.full = false
+
+			// refresh in a goroutine asynchronously
+			go func() {
+				timeout := time.Second
+				deadline := time.Now().Add(timeout)
+				conn.SetTimeout(deadline, timeout)
+				conn.refresh()
+				if _, err := conn.RequestInfo("build"); err == nil {
+					// return to the pool
+					conn.refresh()
+					h.Offer(conn)
+				} else {
+					// drop on error
+					conn.Close()
+				}
+			}()
+
+			return true
+		}
+	}
+
+	return false
+}
+
 // Len returns the number of connections in the heap
 func (h *singleConnectionHeap) Len() int {
 	cnt := 0
@@ -190,15 +234,17 @@ func newConnectionHeap(minSize, maxSize int) *connectionHeap {
 	// will be >= 1
 	perHeapSize := maxSize / heapCount
 
-	heaps := make([]singleConnectionHeap, heapCount)
-	for i := range heaps {
-		heaps[i] = *newSingleConnectionHeap(perHeapSize)
-	}
-
 	// add a heap for the remainder
 	remainder := maxSize - heapCount*perHeapSize
-	if remainder > 0 {
-		heaps = append(heaps, *newSingleConnectionHeap(remainder))
+
+	heaps := make([]singleConnectionHeap, heapCount)
+	for i := range heaps {
+		rem := 0
+		if remainder > 0 {
+			rem = 1
+			remainder--
+		}
+		heaps[i] = *newSingleConnectionHeap(perHeapSize + rem)
 	}
 
 	return &connectionHeap{
@@ -240,20 +286,30 @@ func (h *connectionHeap) Poll(hint byte) (res *Connection) {
 // DropIdle closes all idle connections.
 // It will only drop connections if there are
 // at least ClientPolicy.MinConnectionPerNode available
-func (h *connectionHeap) DropIdle() {
+func (h *connectionHeap) DropIdle(tendInterval time.Duration) {
 	// decide how many conns are allowed to drop
 	// in minSize is 0, up to all connection can
 	// be closed if idle
 	excessCount := h.LenAll() - h.minSize
-	if excessCount <= 0 {
-		return
+	excessDropped := false
+
+	if excessCount > 0 {
+	MAIN_LOOP:
+		for i := 0; i < len(h.heaps); i++ {
+			for h.heaps[i].DropIdleTail() {
+				excessCount--
+				if excessCount == 0 {
+					excessDropped = true
+					break MAIN_LOOP
+				}
+			}
+		}
 	}
 
-	for i := 0; i < len(h.heaps); i++ {
-		for h.heaps[i].DropIdleTail() {
-			excessCount--
-			if excessCount == 0 {
-				return
+	// Now refresh the rest if they are approaching Idle
+	if excessDropped || h.LenAll() <= h.minSize {
+		for i := 0; i < len(h.heaps); i++ {
+			for h.heaps[i].RefreshIdleTail(tendInterval) {
 			}
 		}
 	}
