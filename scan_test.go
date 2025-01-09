@@ -86,6 +86,47 @@ var _ = gg.Describe("Scan operations", func() {
 		return counter
 	}
 
+	// read all records from the channel and make sure all of them are returned
+	// if cancelCnt is set, it will cancel the scan after specified record count
+	var checkResultsIter = func(recordset *as.Recordset, cancelCnt int, rawCDT bool) int {
+		counter := 0
+		for rec, err := range recordset.Records() {
+			gm.Expect(err).ToNot(gm.HaveOccurred())
+			key, exists := keys[string(rec.Key.Digest())]
+
+			gm.Expect(exists).To(gm.Equal(true))
+			gm.Expect(key.Value().GetObject()).To(gm.Equal(rec.Key.Value().GetObject()))
+
+			gm.Expect(rec.Bins[bin3.Name]).NotTo(gm.BeNil())
+			gm.Expect(rec.Bins[bin4.Name]).NotTo(gm.BeNil())
+			if rawCDT {
+				gm.Expect(rec.Bins[bin3.Name].(*as.RawBlobValue).ParticleType).To(gm.Equal(particleType.MAP))
+				gm.Expect(rec.Bins[bin4.Name].(*as.RawBlobValue).ParticleType).To(gm.Equal(particleType.LIST))
+
+				// rewrite the record to the database to see if the values are correctly written
+				err := client.Put(nil, rec.Key, rec.Bins)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+			} else {
+				gm.Expect(rec.Bins[bin1.Name]).To(gm.Equal(bin1.Value.GetObject()))
+				gm.Expect(rec.Bins[bin2.Name]).To(gm.Equal(bin2.Value.GetObject()))
+
+				gm.Expect(rec.Bins[bin3.Name]).To(gm.Equal(map[interface{}]interface{}{"1": 1, "2": 2}))
+				gm.Expect(rec.Bins[bin4.Name]).To(gm.Equal([]interface{}{1, 2, 3}))
+
+				delete(keys, string(rec.Key.Digest()))
+			}
+
+			counter++
+			// cancel scan abruptly
+			if cancelCnt != 0 && counter == cancelCnt {
+				recordset.Close()
+			}
+		}
+
+		gm.Expect(counter).To(gm.BeNumerically(">", 0))
+		return counter
+	}
+
 	gg.BeforeEach(func() {
 		keys = make(map[string]*as.Key, keyCount)
 		set = randString(50)
@@ -116,6 +157,29 @@ var _ = gg.Describe("Scan operations", func() {
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 
 			recs := checkResults(recordset, 0, false)
+			gm.Expect(recs).To(gm.BeNumerically("<=", int(spolicy.MaxRecords)))
+			received += recs
+		}
+
+		gm.Expect(times).To(gm.BeNumerically(">=", keyCount/spolicy.MaxRecords))
+		gm.Expect(len(keys)).To(gm.Equal(0))
+	})
+
+	gg.It("must Scan and paginate to get all records back from all partitions concurrently using Records() iterator", func() {
+		gm.Expect(len(keys)).To(gm.Equal(keyCount))
+
+		pf := as.NewPartitionFilterAll()
+		spolicy := as.NewScanPolicy()
+		spolicy.MaxRecords = 30
+
+		times := 0
+		received := 0
+		for received < keyCount {
+			times++
+			recordset, err := client.ScanPartitions(spolicy, pf, ns, set)
+			gm.Expect(err).ToNot(gm.HaveOccurred())
+
+			recs := checkResultsIter(recordset, 0, false)
 			gm.Expect(recs).To(gm.BeNumerically("<=", int(spolicy.MaxRecords)))
 			received += recs
 		}
