@@ -14,7 +14,7 @@
 
 package aerospike
 
-// Multi-record transaction (MRT) commit status code.
+// Transaction commit status code.
 type CommitStatus string
 
 const (
@@ -22,6 +22,6 @@ const (
 	CommitStatusUnverified           CommitStatus = "Commit process was disrupted on client side and unverified"
 	CommitStatusAlreadyCommitted     CommitStatus = "Already committed"
 	CommitStatusAlreadyAborted       CommitStatus = "Already aborted"
-	CommitStatusRollForwardAbandoned CommitStatus = "MRT client roll forward abandoned. Server will eventually commit the MRT."
-	CommitStatusCloseAbandoned       CommitStatus = "MRT has been rolled forward, but MRT client close was abandoned. Server will eventually close the MRT."
+	CommitStatusRollForwardAbandoned CommitStatus = "Transaction client roll forward abandoned. Server will eventually commit the Transaction."
+	CommitStatusCloseAbandoned       CommitStatus = "Transaction has been rolled forward, but Transaction client close was abandoned. Server will eventually close the Transaction."
 )

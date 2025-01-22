@@ -260,23 +260,23 @@ const (
 	// UDF_BAD_RESPONSE defines a user defined function returned an error code.
 	UDF_BAD_RESPONSE ResultCode = 100
 
-	// MRT record blocked by a different transaction.
+	// Transaction record blocked by a different transaction.
 	MRT_BLOCKED ResultCode = 120
 
-	// MRT read version mismatch identified during commit.
+	// Transaction read version mismatch identified during commit.
 	// Some other command changed the record outside of the transaction.
 	MRT_VERSION_MISMATCH ResultCode = 121
 
-	// MRT deadline reached without a successful commit or abort.
+	// Transaction deadline reached without a successful commit or abort.
 	MRT_EXPIRED ResultCode = 122
 
-	// MRT write command limit (4096) exceeded.
+	// Transaction write command limit (4096) exceeded.
 	MRT_TOO_MANY_WRITES ResultCode = 123
 
-	// MRT was already committed.
+	// Transaction was already committed.
 	MRT_COMMITTED ResultCode = 124
 
-	// MRT was already aborted.
+	// Transaction was already aborted.
 	MRT_ABORTED ResultCode = 125
 
 	// This record has been locked by a previous update in this transaction.
@@ -581,22 +581,22 @@ func ResultCodeToString(resultCode ResultCode) string {
 		return "UDF returned error"
 
 	case MRT_BLOCKED:
-		return "MRT record blocked by a different transaction"
+		return "Transaction record blocked by a different transaction"
 
 	case MRT_VERSION_MISMATCH:
-		return "MRT read version mismatch identified during commit. Some other command changed the record outside of the transaction"
+		return "Transaction read version mismatch identified during commit. Some other command changed the record outside of the transaction"
 
 	case MRT_EXPIRED:
-		return "MRT deadline reached without a successful commit or abort"
+		return "Transaction deadline reached without a successful commit or abort"
 
 	case MRT_TOO_MANY_WRITES:
-		return "MRT write command limit (4096) exceeded"
+		return "Transaction write command limit (4096) exceeded"
 
 	case MRT_COMMITTED:
-		return "MRT was already committed"
+		return "Transaction was already committed"
 
 	case MRT_ABORTED:
-		return "MRT was already aborted"
+		return "Transaction was already aborted"
 
 	case MRT_ALREADY_LOCKED:
 		return "This record has been locked by a previous update in this transaction"

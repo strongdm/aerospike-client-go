@@ -16,7 +16,7 @@ package aerospike
 
 import "time"
 
-// Multi-record transaction (MRT) policy fields used to batch roll forward/backward records on
+// Transaction policy fields used to batch roll forward/backward records on
 // commit or abort. Used a placeholder for now as there are no additional fields beyond BatchPolicy.
 type TxnRollPolicy struct {
 	BatchPolicy

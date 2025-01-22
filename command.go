@@ -86,11 +86,11 @@ const (
 	// See Below
 	_INFO3_SC_READ_RELAX int = (1 << 7)
 
-	// Send MRT version to the server to be verified.
+	// Send Transaction version to the server to be verified.
 	_INFO4_MRT_VERIFY_READ = (1 << 0)
-	// Roll forward MRT.
+	// Roll forward Transaction.
 	_INFO4_MRT_ROLL_FORWARD = (1 << 1)
-	// Roll back MRT.
+	// Roll back Transaction.
 	_INFO4_MRT_ROLL_BACK = (1 << 2)
 	// Must be able to lock record in transaction.
 	_INFO4_MRT_ON_LOCKING_ONLY = (1 << 4)
@@ -628,7 +628,7 @@ func (cmd *baseCommand) sizeTxn(key *Key, txn *Txn, hasWrite bool) int {
 
 func (cmd *baseCommand) sizeTxnBatch(txn *Txn, ver *uint64, hasWrite bool) {
 	if txn != nil {
-		cmd.dataOffset++ // Add info4 byte for MRT.
+		cmd.dataOffset++ // Add info4 byte for Transaction.
 		cmd.dataOffset += int(8 + _FIELD_HEADER_SIZE)
 
 		if ver != nil {

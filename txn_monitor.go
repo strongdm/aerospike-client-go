@@ -136,8 +136,8 @@ func (tm *TxnMonitor) copyTimeoutPolicy(policy *BasePolicy) *WritePolicy {
 	wp.UseCompression = policy.UseCompression
 	wp.RespondPerEachOp = true
 
-	// Note that the server only accepts the timeout on MRT monitor record create.
-	// The server ignores the MRT timeout field on successive MRT monitor record
+	// Note that the server only accepts the timeout on Transaction monitor record create.
+	// The server ignores the Transaction timeout field on successive Transaction monitor record
 	// updates.
 	wp.Expiration = uint32(policy.Txn.timeout)
 

@@ -61,9 +61,9 @@ type Client struct {
 	DefaultAdminPolicy *AdminPolicy
 	// DefaultInfoPolicy is used for all info commands without a specific policy.
 	DefaultInfoPolicy *InfoPolicy
-	// Default multi-record transaction (MRT) policy when verifying record versions in a batch on a commit.
+	// Default transaction policy when verifying record versions in a batch on a commit.
 	DefaultTxnVerifyPolicy *TxnVerifyPolicy
-	// Default multi-record transaction (MRT) policy when rolling the transaction records forward (commit)
+	// Default transaction policy when rolling the transaction records forward (commit)
 	// or back (abort) in a batch.
 	DefaultTxnRollPolicy *TxnRollPolicy
 }

@@ -165,7 +165,7 @@ func (txr *TxnRoll) VerifyRecordVersions(verifyPolicy *BatchPolicy) Error {
 }
 
 func (txr *TxnRoll) MarkRollForward(writePolicy *WritePolicy, txnKey *Key) Error {
-	// Tell MRT monitor that a roll-forward will commence.
+	// Tell Transaction monitor that a roll-forward will commence.
 	cmd, err := newTxnMarkRollForwardCommand(txr.client.cluster, writePolicy, txnKey)
 	if err != nil {
 		return err
@@ -224,7 +224,7 @@ func (txr *TxnRoll) Roll(rollPolicy *BatchPolicy, txnAttr int) Error {
 }
 
 func (txr *TxnRoll) Close(writePolicy *WritePolicy, txnKey *Key) Error {
-	// Delete MRT monitor on server.
+	// Delete Transaction monitor on server.
 	cmd, err := newTxnCloseCommand(txr.client.cluster, txr.txn, writePolicy, txnKey)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func (txr *TxnRoll) Close(writePolicy *WritePolicy, txnKey *Key) Error {
 		return err
 	}
 
-	// Reset MRT on client.
+	// Reset Transaction on client.
 	cmd.txn.Clear()
 
 	return nil

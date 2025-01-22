@@ -64,7 +64,7 @@ func (cmd *txnAddKeysCommand) parseResult(ifc command, conn *Connection) Error {
 }
 
 func (cmd *txnAddKeysCommand) onInDoubt() {
-	// The MRT monitor record might exist if TxnAddKeys command is inDoubt.
+	// The Transaction monitor record might exist if TxnAddKeys command is inDoubt.
 	cmd.txn.SetMonitorInDoubt()
 }
 

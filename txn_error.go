@@ -23,10 +23,10 @@ type TxnError struct {
 	// Error status of the attempted commit.
 	CommitError CommitError
 
-	// Verify result for each read key in the MRT. May be nil if failure occurred before verify.
+	// Verify result for each read key in the Transaction. May be nil if failure occurred before verify.
 	VerifyRecords []*BatchRecord
 
-	// Roll forward/backward result for each write key in the MRT. May be nil if failure occurred before
+	// Roll forward/backward result for each write key in the Transaction. May be nil if failure occurred before
 	// roll forward/backward.
 	RollRecords []*BatchRecord
 }
