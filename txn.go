@@ -40,16 +40,15 @@ func init() {
 
 // Transaction. Each command in the Transaction must use the same namespace.
 type Txn struct {
-	id             int64
-	reads          sm.Map[*Key, *uint64]
-	writes         sm.Map[*Key, struct{}]
-	namespace      *string
-	timeout        int
-	deadline       int
-	monitorInDoubt bool
-	inDoubt        bool
-	rollAttempted  bool
-	state          TxnState
+	id           int64
+	reads        sm.Map[*Key, *uint64]
+	writes       sm.Map[*Key, struct{}]
+	state        TxnState
+	namespace    *string
+	timeout      int
+	deadline     int
+	writeInDoubt bool
+	inDoubt      bool
 }
 
 // Create Transaction, assign random transaction id and initialize reads/writes hashmaps with default capacities.
@@ -158,6 +157,7 @@ func (txn *Txn) OnWrite(key *Key, version *uint64, resultCode types.ResultCode) 
 
 // Add key to write hash when write command is in doubt (usually caused by timeout).
 func (txn *Txn) OnWriteInDoubt(key *Key) {
+	txn.writeInDoubt = true
 	txn.reads.Delete(key)
 	txn.writes.Set(key, struct{}{})
 }
@@ -289,28 +289,14 @@ func (txn *Txn) SetInDoubt(inDoubt bool) {
 	txn.inDoubt = inDoubt
 }
 
-// Set that the Transaction monitor existence is in doubt.
-func (txn *Txn) SetMonitorInDoubt() {
-	txn.monitorInDoubt = true
-}
-
-// Does Transaction monitor record exist or is in doubt.
-func (txn *Txn) MonitorMightExist() bool {
-	return txn.deadline != 0 || txn.monitorInDoubt
+// Return if the MRT monitor record should be closed/deleted. For internal use only.
+func (txn *Txn) CloseMonitor() bool {
+	return txn.deadline != 0 && !txn.writeInDoubt
 }
 
 // Does Transaction monitor record exist.
 func (txn *Txn) MonitorExists() bool {
 	return txn.deadline != 0
-}
-
-// Verify that commit/abort is only attempted once. For internal use only.
-func (txn *Txn) SetRollAttempted() bool {
-	if txn.rollAttempted {
-		return false
-	}
-	txn.rollAttempted = true
-	return true
 }
 
 // Clear Transaction. Remove all tracked keys.

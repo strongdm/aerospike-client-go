@@ -41,7 +41,7 @@ func (txr *TxnRoll) Verify(verifyPolicy, rollPolicy *BatchPolicy) Error {
 
 		}
 
-		if txr.txn.MonitorMightExist() {
+		if txr.txn.CloseMonitor() {
 			writePolicy := NewWritePolicy(0, 0)
 			writePolicy.BasePolicy = rollPolicy.BasePolicy
 
@@ -88,7 +88,7 @@ func (txr *TxnRoll) Commit(rollPolicy *BatchPolicy) (CommitStatus, Error) {
 		return CommitStatusRollForwardAbandoned, err
 	}
 
-	if txr.txn.MonitorMightExist() {
+	if txr.txn.CloseMonitor() {
 		txnKey := getTxnMonitorKey(txr.txn)
 		if err := txr.Close(writePolicy, txnKey); err != nil {
 			return CommitStatusCloseAbandoned, err
@@ -104,7 +104,7 @@ func (txr *TxnRoll) Abort(rollPolicy *BatchPolicy) (AbortStatus, Error) {
 		return AbortStatusRollBackAbandoned, err
 	}
 
-	if txr.txn.MonitorMightExist() {
+	if txr.txn.CloseMonitor() {
 		writePolicy := NewWritePolicy(0, 0)
 		writePolicy.BasePolicy = rollPolicy.BasePolicy
 

@@ -66,11 +66,6 @@ func (cmd *txnAddKeysCommand) parseResult(ifc command, conn *Connection) Error {
 	return nil
 }
 
-func (cmd *txnAddKeysCommand) onInDoubt() {
-	// The Transaction monitor record might exist if TxnAddKeys command is inDoubt.
-	cmd.txn.SetMonitorInDoubt()
-}
-
 func (cmd *txnAddKeysCommand) Execute() Error {
 	return cmd.execute(cmd)
 }
