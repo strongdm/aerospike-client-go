@@ -16,7 +16,7 @@ package aerospike
 
 import "time"
 
-// Multi-record transaction (MRT) policy fields used to batch verify record versions on commit.
+// Transaction policy fields used to batch verify record versions on commit.
 // Used a placeholder for now as there are no additional fields beyond BatchPolicy.
 type TxnVerifyPolicy struct {
 	BatchPolicy

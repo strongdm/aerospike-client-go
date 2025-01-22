@@ -14,13 +14,13 @@
 
 package aerospike
 
-// Multi-record transaction (MRT) abort status code.
+// Transaction abort status code.
 type AbortStatus string
 
 const (
 	AbortStatusOK                AbortStatus = "Abort succeeded"
 	AbortStatusAlreadyCommitted  AbortStatus = "Already committed"
 	AbortStatusAlreadyAborted    AbortStatus = "Already aborted"
-	AbortStatusRollBackAbandoned AbortStatus = "MRT client roll back abandoned. Server will eventually abort the MRT."
-	AbortStatusCloseAbandoned    AbortStatus = "MRT has been rolled back, but MRT client close was abandoned. Server will eventually close the MRT."
+	AbortStatusRollBackAbandoned AbortStatus = "Transaction client roll back abandoned. Server will eventually abort the Transaction."
+	AbortStatusCloseAbandoned    AbortStatus = "Transaction has been rolled back, but Transaction client close was abandoned. Server will eventually close the Transaction."
 )

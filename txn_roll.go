@@ -37,21 +37,21 @@ func (txr *TxnRoll) Verify(verifyPolicy, rollPolicy *BatchPolicy) Error {
 		txr.txn.SetState(TxnStateAborted)
 
 		if err := txr.Roll(rollPolicy, _INFO4_MRT_ROLL_BACK); err != nil {
-			return NewTxnCommitError(CommitErrorVerifyFailAbortAbandoned, err)
+			return NewTxnCommitError(CommitErrorVerifyFailAbortAbandoned, txr.verifyRecords, txr.rollRecords, err)
 
 		}
 
-		if txr.txn.MonitorMightExist() {
+		if txr.txn.CloseMonitor() {
 			writePolicy := NewWritePolicy(0, 0)
 			writePolicy.BasePolicy = rollPolicy.BasePolicy
 
 			txnKey := getTxnMonitorKey(txr.txn)
 			if err := txr.Close(writePolicy, txnKey); err != nil {
-				return NewTxnCommitError(CommitErrorVerifyFailAbortAbandoned, err)
+				return NewTxnCommitError(CommitErrorVerifyFailAbortAbandoned, txr.verifyRecords, txr.rollRecords, err)
 			}
 		}
 
-		return NewTxnCommitError(CommitErrorVerifyFail, err)
+		return NewTxnCommitError(CommitErrorVerifyFail, txr.verifyRecords, txr.rollRecords, err)
 	}
 	txr.txn.SetState(TxnStateVerified)
 	return nil
@@ -65,7 +65,7 @@ func (txr *TxnRoll) Commit(rollPolicy *BatchPolicy) (CommitStatus, Error) {
 
 	if txr.txn.MonitorExists() {
 		if err := txr.MarkRollForward(writePolicy, txnKey); err != nil {
-			aec := NewTxnCommitError(CommitErrorVerifyFailAbortAbandoned, err)
+			aec := NewTxnCommitError(CommitErrorVerifyFailAbortAbandoned, txr.verifyRecords, txr.rollRecords, err)
 
 			if err.resultCode() == types.MRT_ABORTED {
 				aec.markInDoubt(false)
@@ -88,7 +88,7 @@ func (txr *TxnRoll) Commit(rollPolicy *BatchPolicy) (CommitStatus, Error) {
 		return CommitStatusRollForwardAbandoned, err
 	}
 
-	if txr.txn.MonitorMightExist() {
+	if txr.txn.CloseMonitor() {
 		txnKey := getTxnMonitorKey(txr.txn)
 		if err := txr.Close(writePolicy, txnKey); err != nil {
 			return CommitStatusCloseAbandoned, err
@@ -104,7 +104,7 @@ func (txr *TxnRoll) Abort(rollPolicy *BatchPolicy) (AbortStatus, Error) {
 		return AbortStatusRollBackAbandoned, err
 	}
 
-	if txr.txn.MonitorMightExist() {
+	if txr.txn.CloseMonitor() {
 		writePolicy := NewWritePolicy(0, 0)
 		writePolicy.BasePolicy = rollPolicy.BasePolicy
 
@@ -159,13 +159,13 @@ func (txr *TxnRoll) VerifyRecordVersions(verifyPolicy *BatchPolicy) Error {
 	}
 
 	if err := txr.client.batchExecuteSimple(verifyPolicy, commands); err != nil {
-		return newError(types.COMMON_ERROR, "Failed to verify one or more record versions")
+		return newErrorAndWrap(err, types.COMMON_ERROR, "Failed to verify one or more record versions")
 	}
 	return nil
 }
 
 func (txr *TxnRoll) MarkRollForward(writePolicy *WritePolicy, txnKey *Key) Error {
-	// Tell MRT monitor that a roll-forward will commence.
+	// Tell Transaction monitor that a roll-forward will commence.
 	cmd, err := newTxnMarkRollForwardCommand(txr.client.cluster, writePolicy, txnKey)
 	if err != nil {
 		return err
@@ -217,14 +217,14 @@ func (txr *TxnRoll) Roll(rollPolicy *BatchPolicy, txnAttr int) Error {
 		if txnAttr == _INFO4_MRT_ROLL_FORWARD {
 			rollString = "commit"
 		}
-		return newError(types.COMMON_ERROR, "Failed to "+rollString+" one or more record versions")
+		return newErrorAndWrap(err, types.COMMON_ERROR, "Failed to "+rollString+" one or more record versions")
 	}
 
 	return nil
 }
 
 func (txr *TxnRoll) Close(writePolicy *WritePolicy, txnKey *Key) Error {
-	// Delete MRT monitor on server.
+	// Delete Transaction monitor on server.
 	cmd, err := newTxnCloseCommand(txr.client.cluster, txr.txn, writePolicy, txnKey)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func (txr *TxnRoll) Close(writePolicy *WritePolicy, txnKey *Key) Error {
 		return err
 	}
 
-	// Reset MRT on client.
+	// Reset Transaction on client.
 	cmd.txn.Clear()
 
 	return nil

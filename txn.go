@@ -15,7 +15,6 @@
 package aerospike
 
 import (
-	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -23,7 +22,7 @@ import (
 	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
-// MRT state.
+// Transaction state.
 type TxnState byte
 
 const (
@@ -39,24 +38,23 @@ func init() {
 	txnRandomState.Store(time.Now().UnixNano())
 }
 
-// Multi-record transaction (MRT). Each command in the MRT must use the same namespace.
+// Transaction. Each command in the Transaction must use the same namespace.
 type Txn struct {
-	id             int64
-	reads          sm.Map[*Key, *uint64]
-	writes         sm.Map[*Key, struct{}]
-	namespace      *string
-	timeout        int
-	deadline       int
-	monitorInDoubt bool
-	inDoubt        bool
-	rollAttempted  bool
-	state          TxnState
+	id           int64
+	reads        sm.Map[*Key, *uint64]
+	writes       sm.Map[*Key, struct{}]
+	state        TxnState
+	namespace    *string
+	timeout      int
+	deadline     int
+	writeInDoubt bool
+	inDoubt      bool
 }
 
-// Create MRT, assign random transaction id and initialize reads/writes hashmaps with default capacities.
+// Create Transaction, assign random transaction id and initialize reads/writes hashmaps with default capacities.
 //
-// The default client MRT timeout is zero. This means use the server configuration mrt-duration
-// as the MRT timeout. The default mrt-duration is 10 seconds.
+// The default client Transaction timeout is zero. This means use the server configuration transaction-duration
+// as the Transaction timeout. The default transaction-duration is 10 seconds.
 func NewTxn() *Txn {
 	return &Txn{
 		id:      createTxnId(),
@@ -67,10 +65,10 @@ func NewTxn() *Txn {
 	}
 }
 
-// Create MRT, assign random transaction id and initialize reads/writes hashmaps with given capacities.
+// Create Transaction, assign random transaction id and initialize reads/writes hashmaps with given capacities.
 //
-// readsCapacity     expected number of record reads in the MRT. Minimum value is 16.
-// writesCapacity    expected number of record writes in the MRT. Minimum value is 16.
+// readsCapacity     expected number of record reads in the Transaction. Minimum value is 16.
+// writesCapacity    expected number of record writes in the Transaction. Minimum value is 16.
 func NewTxnWithCapacity(readsCapacity, writesCapacity int) *Txn {
 	if readsCapacity < 16 {
 		readsCapacity = 16
@@ -110,17 +108,17 @@ func createTxnId() int64 {
 	return newState // 0x2545f4914f6cdd1dl;
 }
 
-// Return MRT ID.
+// Return Transaction ID.
 func (txn *Txn) Id() int64 {
 	return txn.id
 }
 
-// Return MRT ID.
+// Return Transaction ID.
 func (txn *Txn) State() TxnState {
 	return txn.state
 }
 
-// Set MRT ID.
+// Set Transaction ID.
 func (txn *Txn) SetState(state TxnState) {
 	txn.state = state
 }
@@ -159,6 +157,7 @@ func (txn *Txn) OnWrite(key *Key, version *uint64, resultCode types.ResultCode) 
 
 // Add key to write hash when write command is in doubt (usually caused by timeout).
 func (txn *Txn) OnWriteInDoubt(key *Key) {
+	txn.writeInDoubt = true
 	txn.reads.Delete(key)
 	txn.writes.Set(key, struct{}{})
 }
@@ -173,12 +172,12 @@ func (txn *Txn) WriteExistsForKey(key *Key) bool {
 	return txn.writes.Exists(key)
 }
 
-// Return MRT namespace.
+// Return Transaction namespace.
 func (txn *Txn) GetNamespace() string {
 	return *txn.namespace
 }
 
-// Verify current MRT state and namespace for a future read command.
+// Verify current Transaction state and namespace for a future read command.
 func (txn *Txn) prepareRead(ns string) Error {
 	if err := txn.VerifyCommand(); err != nil {
 		return err
@@ -186,7 +185,7 @@ func (txn *Txn) prepareRead(ns string) Error {
 	return txn.SetNamespace(ns)
 }
 
-// Verify current MRT state and namespaces for a future batch read command.
+// Verify current Transaction state and namespaces for a future batch read command.
 func (txn *Txn) prepareReadForKeys(keys []*Key) Error {
 	if err := txn.VerifyCommand(); err != nil {
 		return err
@@ -194,7 +193,7 @@ func (txn *Txn) prepareReadForKeys(keys []*Key) Error {
 	return txn.setNamespaceForKeys(keys)
 }
 
-// Verify current MRT state and namespaces for a future batch read command.
+// Verify current Transaction state and namespaces for a future batch read command.
 func (txn *Txn) prepareBatchReads(records []*BatchRead) Error {
 	if err := txn.VerifyCommand(); err != nil {
 		return err
@@ -202,7 +201,7 @@ func (txn *Txn) prepareBatchReads(records []*BatchRead) Error {
 	return txn.setNamespaceForBatchReads(records)
 }
 
-// Verify current MRT state and namespaces for a future batch read command.
+// Verify current Transaction state and namespaces for a future batch read command.
 func (txn *Txn) prepareReadForBatchRecordsIfc(records []BatchRecordIfc) Error {
 	if err := txn.VerifyCommand(); err != nil {
 		return err
@@ -210,27 +209,27 @@ func (txn *Txn) prepareReadForBatchRecordsIfc(records []BatchRecordIfc) Error {
 	return txn.setNamespaceForBatchRecordsIfc(records)
 }
 
-// Verify that the MRT state allows future commands.
+// Verify that the Transaction state allows future commands.
 func (txn *Txn) VerifyCommand() Error {
 	if txn.state != TxnStateOpen {
-		return newError(types.FAIL_FORBIDDEN, fmt.Sprintf("Command not allowed in current MRT state: %#v", txn.state))
+		return newError(types.COMMON_ERROR, "Issuing commands to this transaction is forbidden because it has been ended by a commit or abort")
 	}
 	return nil
 }
 
-// Set MRT namespace only if doesn't already exist.
+// Set Transaction namespace only if doesn't already exist.
 // If namespace already exists, verify new namespace is the same.
 func (txn *Txn) SetNamespace(ns string) Error {
 	if txn.namespace == nil {
 		txn.namespace = &ns
 	} else if *txn.namespace != ns {
-		return newError(types.COMMON_ERROR, "Namespace must be the same for all commands in the MRT. orig: "+
+		return newError(types.COMMON_ERROR, "Namespace must be the same for all commands in the Transaction. orig: "+
 			*txn.namespace+" new: "+ns)
 	}
 	return nil
 }
 
-// Set MRT namespaces for each key only if doesn't already exist.
+// Set Transaction namespaces for each key only if doesn't already exist.
 // If namespace already exists, verify new namespace is the same.
 func (txn *Txn) setNamespaceForKeys(keys []*Key) Error {
 	for _, key := range keys {
@@ -241,7 +240,7 @@ func (txn *Txn) setNamespaceForKeys(keys []*Key) Error {
 	return nil
 }
 
-// Set MRT namespaces for each key only if doesn't already exist.
+// Set Transaction namespaces for each key only if doesn't already exist.
 // If namespace already exists, verify new namespace is the same.
 func (txn *Txn) setNamespaceForBatchReads(records []*BatchRead) Error {
 	for _, br := range records {
@@ -252,7 +251,7 @@ func (txn *Txn) setNamespaceForBatchReads(records []*BatchRead) Error {
 	return nil
 }
 
-// Set MRT namespaces for each key only if doesn't already exist.
+// Set Transaction namespaces for each key only if doesn't already exist.
 // If namespace already exists, verify new namespace is the same.
 func (txn *Txn) setNamespaceForBatchRecordsIfc(records []BatchRecordIfc) Error {
 	for _, br := range records {
@@ -263,58 +262,44 @@ func (txn *Txn) setNamespaceForBatchRecordsIfc(records []BatchRecordIfc) Error {
 	return nil
 }
 
-// Get MRT deadline.
+// Get Transaction deadline.
 func (txn *Txn) GetTimeout() time.Duration {
 	return time.Duration(txn.timeout) * time.Second
 }
 
-// Set MRT timeout in seconds. The timer starts when the MRT monitor record is
+// Set Transaction timeout in seconds. The timer starts when the Transaction monitor record is
 // created.
-// This occurs when the first command in the MRT is executed. If the timeout is
+// This occurs when the first command in the Transaction is executed. If the timeout is
 // reached before
-// a commit or abort is called, the server will expire and rollback the MRT.
+// a commit or abort is called, the server will expire and rollback the Transaction.
 //
-// If the MRT timeout is zero, the server configuration mrt-duration is used.
-// The default mrt-duration is 10 seconds.
+// If the Transaction timeout is zero, the server configuration transaction-duration is used.
+// The default transaction-duration is 10 seconds.
 func (txn *Txn) SetTimeout(timeout time.Duration) {
 	txn.timeout = int(timeout / time.Second)
 }
 
-// Get MRT inDoubt.
+// Get Transaction inDoubt.
 func (txn *Txn) GetInDoubt() bool {
 	return txn.inDoubt
 }
 
-// Set MRT inDoubt. For internal use only.
+// Set Transaction inDoubt. For internal use only.
 func (txn *Txn) SetInDoubt(inDoubt bool) {
 	txn.inDoubt = inDoubt
 }
 
-// Set that the MRT monitor existence is in doubt.
-func (txn *Txn) SetMonitorInDoubt() {
-	txn.monitorInDoubt = true
+// Return if the MRT monitor record should be closed/deleted. For internal use only.
+func (txn *Txn) CloseMonitor() bool {
+	return txn.deadline != 0 && !txn.writeInDoubt
 }
 
-// Does MRT monitor record exist or is in doubt.
-func (txn *Txn) MonitorMightExist() bool {
-	return txn.deadline != 0 || txn.monitorInDoubt
-}
-
-// Does MRT monitor record exist.
+// Does Transaction monitor record exist.
 func (txn *Txn) MonitorExists() bool {
 	return txn.deadline != 0
 }
 
-// Verify that commit/abort is only attempted once. For internal use only.
-func (txn *Txn) SetRollAttempted() bool {
-	if txn.rollAttempted {
-		return false
-	}
-	txn.rollAttempted = true
-	return true
-}
-
-// Clear MRT. Remove all tracked keys.
+// Clear Transaction. Remove all tracked keys.
 func (txn *Txn) Clear() {
 	txn.namespace = nil
 	txn.deadline = 0

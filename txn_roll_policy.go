@@ -16,7 +16,7 @@ package aerospike
 
 import "time"
 
-// Multi-record transaction (MRT) policy fields used to batch roll forward/backward records on
+// Transaction policy fields used to batch roll forward/backward records on
 // commit or abort. Used a placeholder for now as there are no additional fields beyond BatchPolicy.
 type TxnRollPolicy struct {
 	BatchPolicy
@@ -27,8 +27,9 @@ func NewTxnRollPolicy() *TxnRollPolicy {
 	mp := *NewBatchPolicy()
 	mp.ReplicaPolicy = MASTER
 	mp.MaxRetries = 5
-	mp.TotalTimeout = 10 * time.Millisecond
-	mp.SleepBetweenRetries = 1 * time.Millisecond
+	mp.SocketTimeout = 3 * time.Second
+	mp.TotalTimeout = 10 * time.Second
+	mp.SleepBetweenRetries = 1 * time.Second
 
 	return &TxnRollPolicy{
 		BatchPolicy: mp,

@@ -61,9 +61,9 @@ type Client struct {
 	DefaultAdminPolicy *AdminPolicy
 	// DefaultInfoPolicy is used for all info commands without a specific policy.
 	DefaultInfoPolicy *InfoPolicy
-	// Default multi-record transaction (MRT) policy when verifying record versions in a batch on a commit.
+	// Default transaction policy when verifying record versions in a batch on a commit.
 	DefaultTxnVerifyPolicy *TxnVerifyPolicy
-	// Default multi-record transaction (MRT) policy when rolling the transaction records forward (commit)
+	// Default transaction policy when rolling the transaction records forward (commit)
 	// or back (abort) in a batch.
 	DefaultTxnRollPolicy *TxnRollPolicy
 }
@@ -1474,7 +1474,7 @@ func (clnt *Client) Commit(txn *Txn) (CommitStatus, Error) {
 	case TxnStateCommitted:
 		return CommitStatusAlreadyCommitted, nil
 	case TxnStateAborted:
-		return CommitStatusAlreadyAborted, nil
+		return CommitStatusAlreadyAborted, newError(types.TXN_ALREADY_ABORTED, "Transaction already aborted")
 	}
 }
 
@@ -1491,7 +1491,7 @@ func (clnt *Client) Abort(txn *Txn) (AbortStatus, Error) {
 	case TxnStateVerified:
 		return tr.Abort(&clnt.GetDefaultTxnRollPolicy().BatchPolicy)
 	case TxnStateCommitted:
-		return AbortStatusAlreadyCommitted, nil
+		return AbortStatusAlreadyCommitted, newError(types.TXN_ALREADY_COMMITTED, "Transaction already committed")
 	case TxnStateAborted:
 		return AbortStatusAlreadyAborted, nil
 	}

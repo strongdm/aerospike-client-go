@@ -21,6 +21,13 @@ import "fmt"
 type ResultCode int
 
 const (
+	// Multi-record transaction failed
+	// Multi-record transaction commit called, but the transaction was already aborted.
+	TXN_ALREADY_ABORTED ResultCode = -24
+
+	// Multi-record transaction abort called, but the transaction was already committed.
+	TXN_ALREADY_COMMITTED ResultCode = -23
+
 	// Multi-record transaction failed.
 	TXN_FAILED ResultCode = -22
 
@@ -253,24 +260,30 @@ const (
 	// UDF_BAD_RESPONSE defines a user defined function returned an error code.
 	UDF_BAD_RESPONSE ResultCode = 100
 
-	// MRT record blocked by a different transaction.
+	// Transaction record blocked by a different transaction.
 	MRT_BLOCKED ResultCode = 120
 
-	// MRT read version mismatch identified during commit.
+	// Transaction read version mismatch identified during commit.
 	// Some other command changed the record outside of the transaction.
 	MRT_VERSION_MISMATCH ResultCode = 121
 
-	// MRT deadline reached without a successful commit or abort.
+	// Transaction deadline reached without a successful commit or abort.
 	MRT_EXPIRED ResultCode = 122
 
-	// MRT write command limit (4096) exceeded.
+	// Transaction write command limit (4096) exceeded.
 	MRT_TOO_MANY_WRITES ResultCode = 123
 
-	// MRT was already committed.
+	// Transaction was already committed.
 	MRT_COMMITTED ResultCode = 124
 
-	// MRT was already aborted.
+	// Transaction was already aborted.
 	MRT_ABORTED ResultCode = 125
+
+	// This record has been locked by a previous update in this transaction.
+	MRT_ALREADY_LOCKED ResultCode = 126
+
+	// This transaction has already started. Writing to the same transaction with independent goroutines is unsafe.
+	MRT_MONITOR_EXISTS ResultCode = 127
 
 	// BATCH_DISABLED defines batch functionality has been disabled.
 	BATCH_DISABLED ResultCode = 150
@@ -333,6 +346,13 @@ const (
 // ResultCodeToString returns a human readable errors message based on the result code.
 func ResultCodeToString(resultCode ResultCode) string {
 	switch ResultCode(resultCode) {
+
+	case TXN_ALREADY_ABORTED:
+		return "Multi-record transaction commit called, but the transaction was already aborted"
+
+	case TXN_ALREADY_COMMITTED:
+		return "Multi-record transaction abort called, but the transaction was already committed"
+
 	case TXN_FAILED:
 		return "Multi-record transaction failed"
 
@@ -561,22 +581,28 @@ func ResultCodeToString(resultCode ResultCode) string {
 		return "UDF returned error"
 
 	case MRT_BLOCKED:
-		return "MRT record blocked by a different transaction"
+		return "Transaction record blocked by a different transaction"
 
 	case MRT_VERSION_MISMATCH:
-		return "MRT read version mismatch identified during commit. Some other command changed the record outside of the transaction"
+		return "Transaction read version mismatch identified during commit. Some other command changed the record outside of the transaction"
 
 	case MRT_EXPIRED:
-		return "MRT deadline reached without a successful commit or abort"
+		return "Transaction deadline reached without a successful commit or abort"
 
 	case MRT_TOO_MANY_WRITES:
-		return "MRT write command limit (4096) exceeded"
+		return "Transaction write command limit (4096) exceeded"
 
 	case MRT_COMMITTED:
-		return "MRT was already committed"
+		return "Transaction was already committed"
 
 	case MRT_ABORTED:
-		return "MRT was already aborted"
+		return "Transaction was already aborted"
+
+	case MRT_ALREADY_LOCKED:
+		return "This record has been locked by a previous update in this transaction"
+
+	case MRT_MONITOR_EXISTS:
+		return "This transaction has already started. Writing to the same transaction with independent goroutines is unsafe"
 
 	case BATCH_DISABLED:
 		return "Batch functionality has been disabled"
@@ -642,6 +668,10 @@ func ResultCodeToString(resultCode ResultCode) string {
 
 func (rc ResultCode) String() string {
 	switch rc {
+	case TXN_ALREADY_ABORTED:
+		return "TXN_ALREADY_ABORTED"
+	case TXN_ALREADY_COMMITTED:
+		return "TXN_ALREADY_COMMITTED"
 	case TXN_FAILED:
 		return "TXN_FAILED"
 	case GRPC_ERROR:
@@ -806,6 +836,10 @@ func (rc ResultCode) String() string {
 		return "MRT_COMMITTED"
 	case MRT_ABORTED:
 		return "MRT_ABORTED"
+	case MRT_ALREADY_LOCKED:
+		return "MRT_ALREADY_LOCKED"
+	case MRT_MONITOR_EXISTS:
+		return "MRT_MONITOR_EXISTS"
 	case BATCH_DISABLED:
 		return "BATCH_DISABLED"
 	case BATCH_MAX_REQUESTS_EXCEEDED:

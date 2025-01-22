@@ -101,7 +101,7 @@ func VarBytesToInt64(buf []byte, offset int, len int) int64 {
 	return val
 }
 
-// Int64ToVersionBytes will convert a uint64 to a 7 byte record version for MRT.
+// Int64ToVersionBytes will convert a uint64 to a 7 byte record version for Transaction.
 func Uint64ToVersionBytes(v uint64, buf []byte, offset int) {
 	buf[offset] = (byte)(v >> 0)
 	offset++
@@ -118,7 +118,7 @@ func Uint64ToVersionBytes(v uint64, buf []byte, offset int) {
 	buf[offset] = (byte)(v >> 48)
 }
 
-// VersionBytesToUint64 converts a 7 byte record version to an uint64 for MRT.
+// VersionBytesToUint64 converts a 7 byte record version to an uint64 for Transaction.
 func VersionBytesToUint64(buf []byte, offset int) *uint64 {
 	res := (((uint64(buf[offset]) & 0xFF) << 0) |
 		((uint64(buf[offset+1]) & 0xFF) << 8) |

@@ -27,7 +27,7 @@ import (
 // ALL tests are isolated by SetName and Key, which are 50 random characters
 var _ = gg.Describe("Aerospike", func() {
 
-	gg.Describe("Multi Record Transaction (MRT) operations", gg.Ordered, func() {
+	gg.Describe("Multi Record Transaction (Transaction) operations", gg.Ordered, func() {
 		var ns = *namespace
 		var set = randString(50)
 		const binName = "bin"

@@ -14,12 +14,12 @@
 
 package aerospike
 
-// Multi-record transaction (MRT) error status.
+// Transaction error status.
 type CommitError string
 
 const (
-	CommitErrorVerifyFail               CommitError = "MRT verify failed. MRT aborted."
-	CommitErrorVerifyFailCloseAbandoned CommitError = "MRT verify failed. MRT aborted. MRT client close abandoned. Server will eventually close the MRT."
-	CommitErrorVerifyFailAbortAbandoned CommitError = "MRT verify failed. MRT client abort abandoned. Server will eventually abort the MRT."
-	CommitErrorMarkRollForwardAbandoned CommitError = "MRT client mark roll forward abandoned. Server will eventually abort the MRT."
+	CommitErrorVerifyFail               CommitError = "Transaction verify failed. Transaction aborted."
+	CommitErrorVerifyFailCloseAbandoned CommitError = "Transaction verify failed. Transaction aborted. Transaction client close abandoned. Server will eventually close the Transaction."
+	CommitErrorVerifyFailAbortAbandoned CommitError = "Transaction verify failed. Transaction client abort abandoned. Server will eventually abort the Transaction."
+	CommitErrorMarkRollForwardAbandoned CommitError = "Transaction client mark roll forward abandoned. Server will eventually abort the Transaction."
 )

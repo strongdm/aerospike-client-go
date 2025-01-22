@@ -33,8 +33,8 @@ var _ Policy = &BasePolicy{}
 // BasePolicy encapsulates parameters for command policy attributes
 // used in all database operation calls.
 type BasePolicy struct {
-	// Multi-record transaction identifier (MRT). If this field is populated, the corresponding
-	// command will be included in the MRT. This field is ignored for scan/query.
+	// Multi-record transaction identifier (Transaction). If this field is populated, the corresponding
+	// command will be included in the Transaction. This field is ignored for scan/query.
 	Txn *Txn
 
 	// FilterExpression is the optional Filter Expression. Supported on Server v5.2+
@@ -158,6 +158,8 @@ type BasePolicy struct {
 	//
 	// This option will increase cpu and memory usage (for extra compressed buffers),but
 	// decrease the size of data sent over the network.
+	//
+	// Valid for Aerospike Server Enterprise Edition only.
 	//
 	// Default: false
 	UseCompression bool // = false
