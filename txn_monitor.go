@@ -109,14 +109,15 @@ func (tm *TxnMonitor) getTranOpsFromValueList(txn *Txn, list []interface{}) []*O
 }
 
 func (tm *TxnMonitor) addWriteKeys(cluster *Cluster, policy *BasePolicy, ops []*Operation) Error {
-	txnKey := getTxnMonitorKey(policy.Txn)
+	txn := policy.Txn
+	txnKey := getTxnMonitorKey(txn)
 	wp := tm.copyTimeoutPolicy(policy)
 	args, err := newOperateArgs(cluster, wp, txnKey, ops)
 	if err != nil {
 		return err
 	}
 
-	cmd, err := newTxnAddKeysCommand(cluster, txnKey, args)
+	cmd, err := newTxnAddKeysCommand(cluster, txnKey, args, txn)
 	if err != nil {
 		return err
 	}
@@ -126,7 +127,7 @@ func (tm *TxnMonitor) addWriteKeys(cluster *Cluster, policy *BasePolicy, ops []*
 func (tm *TxnMonitor) copyTimeoutPolicy(policy *BasePolicy) *WritePolicy {
 	// Inherit some fields from the original command's policy.
 	wp := NewWritePolicy(0, 0)
-	wp.Txn = policy.Txn
+	// wp.Txn = policy.Txn
 	// wp.ConnectTimeout = policy.ConnectTimeout
 	wp.SocketTimeout = policy.SocketTimeout
 	wp.TotalTimeout = policy.TotalTimeout

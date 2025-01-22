@@ -25,12 +25,14 @@ type txnAddKeysCommand struct {
 	baseWriteCommand
 
 	args operateArgs
+	txn  *Txn
 }
 
 func newTxnAddKeysCommand(
 	cluster *Cluster,
 	key *Key,
 	args operateArgs,
+	txn *Txn,
 ) (txnAddKeysCommand, Error) {
 	bwc, err := newBaseWriteCommand(cluster, args.writePolicy, key)
 	if err != nil {
@@ -40,6 +42,7 @@ func newTxnAddKeysCommand(
 	newTxnAddKeysCmd := txnAddKeysCommand{
 		baseWriteCommand: bwc,
 		args:             args,
+		txn:              txn,
 	}
 
 	return newTxnAddKeysCmd, nil
@@ -54,7 +57,7 @@ func (cmd *txnAddKeysCommand) parseResult(ifc command, conn *Connection) Error {
 	if err != nil {
 		return err
 	}
-	rp.parseTranDeadline(cmd.policy.Txn)
+	rp.parseTranDeadline(cmd.txn)
 
 	if rp.resultCode != types.OK {
 		return newCustomNodeError(cmd.node, rp.resultCode)
