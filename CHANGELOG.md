@@ -1,18 +1,22 @@
 # Change History
 
-## January 17 2025: v8.0.0-beta.3
+## January 22 2025: v8.0.0
 
 - **New Features**
   - [CLIENT-3257] Implement iterator support for `Recordset`.
 
 - **Fixes**
-  - [CLIENT-3275] Return an error when MRT commit called, but transaction was already aborted.
+  - [CLIENT-3275] Return an error when Transaction commit called, but transaction was already aborted.
   - [CLIENT-3295] Duplicate parsing of fields in RecordParser.ParseRecord.
-  - [CLIENT-3261] New OnLockingOnly attribute for various write policies to write only if provisional does not exist.
-  - [CLIENT-3227] Clarify that BasePolicy.UseCompression requires Enterprise Edition.
-  - [CLIENT-3260] Add MRT_ALREADY_LOCKED and MRT_MONITOR_EXISTS error codes.
+  - [CLIENT-3261] New `OnLockingOnly` attribute for various write policies to write only if provisional does not exist.
+  - [CLIENT-3227] Clarify that `BasePolicy.UseCompression` requires Enterprise Edition.
+  - [CLIENT-3260] Add `MRT_ALREADY_LOCKED` and `MRT_MONITOR_EXISTS` error codes.
   - [CLIENT-3292][CLIENT-3293] Update dependencies due to Snyk CVE reports.
-  - [CLIENT-3274] Fix MRT related client exception inconsistency between clients.
+  - [CLIENT-3274] Fix Transaction related client exception inconsistency between clients.
+  - [CLIENT-3207] Do not close/delete Transaction monitor record on abort/commit when a write command in that Transaction fails and is `inDoubt`.
+  - [CLIENT-3283] Remove the txn instance from the copied write policy when adding Transaction monitor keys.
+  - [CLIENT-3270] Normalize API reference language with server 8.0 site docs.
+  - [CLIENT-3258] Transaction commit returns 'Failed to commit one or more record versions' error.
 
 ## December 20 2024: v8.0.0-beta.2
 
