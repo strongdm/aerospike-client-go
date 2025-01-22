@@ -27,8 +27,9 @@ func NewTxnRollPolicy() *TxnRollPolicy {
 	mp := *NewBatchPolicy()
 	mp.ReplicaPolicy = MASTER
 	mp.MaxRetries = 5
-	mp.TotalTimeout = 10 * time.Millisecond
-	mp.SleepBetweenRetries = 1 * time.Millisecond
+	mp.SocketTimeout = 3 * time.Second
+	mp.TotalTimeout = 10 * time.Second
+	mp.SleepBetweenRetries = 1 * time.Second
 
 	return &TxnRollPolicy{
 		BatchPolicy: mp,

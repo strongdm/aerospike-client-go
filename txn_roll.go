@@ -159,7 +159,7 @@ func (txr *TxnRoll) VerifyRecordVersions(verifyPolicy *BatchPolicy) Error {
 	}
 
 	if err := txr.client.batchExecuteSimple(verifyPolicy, commands); err != nil {
-		return newError(types.COMMON_ERROR, "Failed to verify one or more record versions")
+		return newErrorAndWrap(err, types.COMMON_ERROR, "Failed to verify one or more record versions")
 	}
 	return nil
 }
@@ -217,7 +217,7 @@ func (txr *TxnRoll) Roll(rollPolicy *BatchPolicy, txnAttr int) Error {
 		if txnAttr == _INFO4_MRT_ROLL_FORWARD {
 			rollString = "commit"
 		}
-		return newError(types.COMMON_ERROR, "Failed to "+rollString+" one or more record versions")
+		return newErrorAndWrap(err, types.COMMON_ERROR, "Failed to "+rollString+" one or more record versions")
 	}
 
 	return nil
