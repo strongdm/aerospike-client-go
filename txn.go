@@ -15,10 +15,10 @@
 package aerospike
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 
-	sm "github.com/aerospike/aerospike-client-go/v8/internal/atomic/map"
 	"github.com/aerospike/aerospike-client-go/v8/types"
 )
 
@@ -41,8 +41,8 @@ func init() {
 // Transaction. Each command in the Transaction must use the same namespace.
 type Txn struct {
 	id           int64
-	reads        sm.Map[*Key, *uint64]
-	writes       sm.Map[*Key, struct{}]
+	reads        keyMap[*uint64]
+	writes       keyMap[struct{}]
 	state        TxnState
 	namespace    *string
 	timeout      int
@@ -58,8 +58,8 @@ type Txn struct {
 func NewTxn() *Txn {
 	return &Txn{
 		id:      createTxnId(),
-		reads:   *sm.New[*Key, *uint64](16),
-		writes:  *sm.New[*Key, struct{}](16),
+		reads:   *newKeyMap[*uint64](16),
+		writes:  *newKeyMap[struct{}](16),
 		timeout: 0,
 		state:   TxnStateOpen,
 	}
@@ -80,8 +80,8 @@ func NewTxnWithCapacity(readsCapacity, writesCapacity int) *Txn {
 
 	return &Txn{
 		id:      createTxnId(),
-		reads:   *sm.New[*Key, *uint64](readsCapacity),
-		writes:  *sm.New[*Key, struct{}](writesCapacity),
+		reads:   *newKeyMap[*uint64](readsCapacity),
+		writes:  *newKeyMap[struct{}](writesCapacity),
 		timeout: 0,
 		state:   TxnStateOpen,
 	}
@@ -305,4 +305,112 @@ func (txn *Txn) Clear() {
 	txn.deadline = 0
 	txn.reads.Clear()
 	txn.writes.Clear()
+}
+
+////////////////////////////////////////////////////////////////////////////
+//
+// Specialized internal data type to simplify key bookkeeping
+//
+////////////////////////////////////////////////////////////////////////////
+
+type keyTupple[V any] struct {
+	k *Key
+	v V
+}
+
+// keyMap implements a keyMap with atomic semantics.
+type keyMap[V any] struct {
+	m     map[[20]byte]*keyTupple[V]
+	mutex sync.RWMutex
+}
+
+// New generates a new Map instance.
+func newKeyMap[V any](length int) *keyMap[V] {
+	return &keyMap[V]{
+		m: make(map[[20]byte]*keyTupple[V], length),
+	}
+}
+
+// Exists atomically checks if a key exists in the map
+func (m *keyMap[V]) Exists(k *Key) bool {
+	if k != nil {
+		m.mutex.RLock()
+		_, ok := m.m[k.digest]
+		m.mutex.RUnlock()
+		return ok
+	}
+	return false
+}
+
+// Get atomically retrieves an element from the Map.
+func (m *keyMap[V]) Get(k *Key) V {
+	if k != nil {
+		m.mutex.RLock()
+		res, found := m.m[k.digest]
+		m.mutex.RUnlock()
+		if found {
+			return res.v
+		}
+	}
+
+	var zero V
+	return zero
+}
+
+// Set atomically sets an element in the Map.
+// If idx is out of range, it will return an error.
+func (m *keyMap[V]) Set(k *Key, v V) {
+	if k != nil {
+		m.mutex.Lock()
+		m.m[k.digest] = &keyTupple[V]{k: k, v: v}
+		m.mutex.Unlock()
+	}
+}
+
+// Clone copies the map and returns the copy.
+func (m *keyMap[V]) Clone() map[*Key]V {
+	m.mutex.RLock()
+	res := make(map[*Key]V, len(m.m))
+	for _, v := range m.m {
+		res[v.k] = v.v
+	}
+	m.mutex.RUnlock()
+
+	return res
+}
+
+// Returns the keys from the map.
+func (m *keyMap[V]) Keys() []*Key {
+	m.mutex.RLock()
+	res := make([]*Key, 0, len(m.m))
+	for _, v := range m.m {
+		res = append(res, v.k)
+	}
+	m.mutex.RUnlock()
+
+	return res
+}
+
+// Clear will remove all entries.
+func (m *keyMap[V]) Clear() {
+	m.mutex.Lock()
+	m.m = make(map[[20]byte]*keyTupple[V], len(m.m))
+	m.mutex.Unlock()
+}
+
+// Delete will remove the key and return its value.
+func (m *keyMap[V]) Delete(k *Key) V {
+	if k != nil {
+		m.mutex.Lock()
+		res, ok := m.m[k.digest]
+		delete(m.m, k.digest)
+		m.mutex.Unlock()
+
+		if ok {
+			return res.v
+		}
+	}
+
+	var zero V
+	return zero
 }

@@ -1,5 +1,11 @@
 # Change History
 
+## February 5 2025: v8.0.1
+
+- **Fixes**
+  - [CLIENT-3305] New key struct causes incorrect generation increment in MRT.
+  - [CLIENT-3326] Fix UDF can read a record with an expired transaction.
+
 ## January 22 2025: v8.0.0
 
 - **New Features**
