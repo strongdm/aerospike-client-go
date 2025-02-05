@@ -28,23 +28,35 @@ const binNameDigests = "keyds"
 
 func (tm *TxnMonitor) addKey(cluster *Cluster, policy *WritePolicy, cmdKey *Key) Error {
 	txn := policy.Txn
+	if err := txn.VerifyCommand(); err != nil {
+		return err
+	}
 
 	if txn.WriteExistsForKey(cmdKey) {
 		// Transaction monitor already contains this key.
 		return nil
 	}
 
-	ops := tm.getTranOps(txn, cmdKey)
+	ops, err := tm.getTranOps(txn, cmdKey)
+	if err != nil {
+		return err
+	}
 	return tm.addWriteKeys(cluster, policy.GetBasePolicy(), ops)
 }
 
 func (tm *TxnMonitor) addKeys(cluster *Cluster, policy *BatchPolicy, keys []*Key) Error {
-	ops := tm.getTranOpsFromKeys(policy.Txn, keys)
+	ops, err := tm.getTranOpsFromKeys(policy.Txn, keys)
+	if err != nil {
+		return err
+	}
 	return tm.addWriteKeys(cluster, policy.GetBasePolicy(), ops)
 }
 
 func (tm *TxnMonitor) addKeysFromRecords(cluster *Cluster, policy *BatchPolicy, records []BatchRecordIfc) Error {
-	ops := tm.getTranOpsFromBatchRecords(policy.Txn, records)
+	ops, err := tm.getTranOpsFromBatchRecords(policy.Txn, records)
+	if err != nil {
+		return err
+	}
 
 	if len(ops) > 0 {
 		return tm.addWriteKeys(cluster, policy.GetBasePolicy(), ops)
@@ -52,36 +64,50 @@ func (tm *TxnMonitor) addKeysFromRecords(cluster *Cluster, policy *BatchPolicy, 
 	return nil
 }
 
-func (tm *TxnMonitor) getTranOps(txn *Txn, cmdKey *Key) []*Operation {
-	txn.SetNamespace(cmdKey.namespace)
+func (tm *TxnMonitor) getTranOps(txn *Txn, cmdKey *Key) ([]*Operation, Error) {
+	if err := txn.SetNamespace(cmdKey.namespace); err != nil {
+		return nil, err
+	}
 
 	if txn.MonitorExists() {
 		return []*Operation{
 			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, cmdKey.Digest()),
-		}
+		}, nil
 	} else {
 		return []*Operation{
 			PutOp(NewBin(binNameId, txn.Id())),
 			ListAppendWithPolicyOp(txnOrderedListPolicy, binNameDigests, cmdKey.Digest()),
-		}
+		}, nil
 	}
 }
 
-func (tm *TxnMonitor) getTranOpsFromKeys(txn *Txn, keys []*Key) []*Operation {
+func (tm *TxnMonitor) getTranOpsFromKeys(txn *Txn, keys []*Key) ([]*Operation, Error) {
+	if err := txn.VerifyCommand(); err != nil {
+		return nil, err
+	}
+
 	list := make([]interface{}, 0, len(keys))
 
 	for _, key := range keys {
-		txn.SetNamespace(key.namespace)
+		if err := txn.SetNamespace(key.namespace); err != nil {
+			return nil, err
+		}
 		list = append(list, NewBytesValue(key.Digest()))
 	}
-	return tm.getTranOpsFromValueList(txn, list)
+	return tm.getTranOpsFromValueList(txn, list), nil
 }
 
-func (tm *TxnMonitor) getTranOpsFromBatchRecords(txn *Txn, records []BatchRecordIfc) []*Operation {
+func (tm *TxnMonitor) getTranOpsFromBatchRecords(txn *Txn, records []BatchRecordIfc) ([]*Operation, Error) {
+	if err := txn.VerifyCommand(); err != nil {
+		return nil, err
+	}
+
 	list := make([]interface{}, 0, len(records))
 
 	for _, br := range records {
-		txn.SetNamespace(br.key().namespace)
+		if err := txn.SetNamespace(br.key().namespace); err != nil {
+			return nil, err
+		}
 
 		if br.BatchRec().hasWrite {
 			list = append(list, br.key().Digest())
@@ -90,9 +116,9 @@ func (tm *TxnMonitor) getTranOpsFromBatchRecords(txn *Txn, records []BatchRecord
 
 	if len(list) == 0 {
 		// Readonly batch does not need to add key digests.
-		return nil
+		return nil, nil
 	}
-	return tm.getTranOpsFromValueList(txn, list)
+	return tm.getTranOpsFromValueList(txn, list), nil
 }
 
 func (tm *TxnMonitor) getTranOpsFromValueList(txn *Txn, list []interface{}) []*Operation {

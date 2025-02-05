@@ -18,6 +18,7 @@ package aerospike_test
 
 import (
 	"fmt"
+	"time"
 
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/aerospike-client-go/v8/types"
@@ -59,7 +60,16 @@ var _ = gg.Describe("Aerospike", func() {
 				function get_gen(rec)
 					return record.gen(rec)
 				end
-			`
+				
+				function rec_read(rec)
+					local m = map()
+					names = record.bin_names(rec)
+					for i, bn in ipairs(names) do
+						m[bn] = rec[bn]
+					end
+					return m
+				end
+				`
 
 			regTask, err := client.RegisterUDF(nil, []byte(luaFunc), "record_example.lua", as.LUA)
 			gm.Expect(err).ToNot(gm.HaveOccurred())
@@ -639,6 +649,42 @@ var _ = gg.Describe("Aerospike", func() {
 				gm.Expect(records[i].Bins[binName]).To(gm.Equal(1))
 			}
 		}) // it
+
+		gg.It("UDF should not read expired record", func() {
+			k, _ := as.NewKey("test", "demo", 0)
+			client.PutBins(nil, k, as.NewBin("bin", 10))
+
+			txn := as.NewTxn()
+			wp := as.NewWritePolicy(0, 0)
+			wp.Txn = txn
+
+			client.PutBins(wp, k, as.NewBin("bin", 20))
+
+			time.Sleep(40 * time.Second)
+
+			p := as.NewPolicy()
+			p.Txn = txn
+
+			r, err := client.Get(p, k)
+			gm.Expect(err).ToNot(gm.HaveOccurred())
+			gm.Expect(r.Bins["bin"]).To(gm.Equal(10))
+
+			r, err = client.Get(nil, k)
+			gm.Expect(r.Bins["bin"]).To(gm.Equal(10))
+
+			_, err = client.Commit(txn)
+			gm.Expect(err).To(gm.HaveOccurred())
+
+			p = as.NewPolicy()
+			p.Txn = txn
+			_, err = client.Get(p, k)
+			gm.Expect(err).To(gm.HaveOccurred())
+
+			wp = as.NewWritePolicy(0, 0)
+			wp.Txn = txn
+			_, err = client.Execute(wp, k, "mrt_ops", "rec_read")
+			gm.Expect(err).To(gm.HaveOccurred())
+		})
 
 		gg.It("must handle different key pointers", func() {
 
