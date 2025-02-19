@@ -92,8 +92,7 @@ func (cmd *batchSingleTxnRollCommand) parseResult(ifc command, conn *Connection)
 		cmd.record.ResultCode = types.OK
 	} else {
 		err := newError(rp.resultCode)
-		err.setInDoubt(cmd.isRead(), cmd.commandSentCounter)
-		return err
+		return err.setInDoubt(cmd.isRead(), cmd.commandSentCounter)
 	}
 
 	return nil
