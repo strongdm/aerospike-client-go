@@ -197,7 +197,7 @@ var _ = gg.Describe("Aerospike", func() {
 				c, err := as.NewClientWithPolicyAndHost(&cpolicy, dbHost)
 				gm.Expect(err).NotTo(gm.HaveOccurred())
 
-				info := info(c, "racks:")
+				info := info(c, "rack-ids")
 				if strings.HasPrefix(strings.ToUpper(info), "ERROR") {
 					gg.Skip("Skipping RackAware test since it is not supported on this cluster...")
 				}
@@ -256,6 +256,191 @@ var _ = gg.Describe("Aerospike", func() {
 			// 		nclient.Close()
 			// 	}
 			// })
+		})
+	})
+
+	gg.Describe("Client-side limitations", func() {
+		gg.Context("Bin size limit of 15 bytes should be respected on", func() {
+			const longBinName = "binNameLongerThan15Bytes"
+			var ns = *namespace
+			var set = randString(50)
+			key, err = as.NewKey(ns, set, randString(50))
+			gm.Expect(err).ToNot(gm.HaveOccurred())
+
+			gg.It("Get", func() {
+				_, err := client.Get(nil, key, longBinName)
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("Put", func() {
+				err := client.Put(nil, key, as.BinMap{longBinName: 1})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("PutBins", func() {
+				err := client.PutBins(nil, key, as.NewBin(longBinName, 1))
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("Add", func() {
+				err := client.Add(nil, key, as.BinMap{longBinName: 1})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("AddBins", func() {
+				err := client.AddBins(nil, key, as.NewBin(longBinName, 1))
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("Append", func() {
+				err := client.Append(nil, key, as.BinMap{longBinName: 1})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("Prepend", func() {
+				err := client.Append(nil, key, as.BinMap{longBinName: 1})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("Operate", func() {
+				_, err := client.Operate(nil, key, as.GetBinOp(longBinName))
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				_, err = client.Operate(nil, key, as.PutOp(as.NewBin(longBinName, 1)))
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				_, err = client.Operate(nil, key, as.AddOp(as.NewBin(longBinName, 1)))
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				_, err = client.Operate(nil, key, as.AppendOp(as.NewBin(longBinName, "1")))
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				_, err = client.Operate(nil, key, as.PrependOp(as.NewBin(longBinName, "1")))
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("BatchGetOperate", func() {
+				_, err := client.BatchGetOperate(nil, []*as.Key{key}, as.GetBinOp(longBinName))
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("BatchReadComplex", func() {
+				err := client.BatchGetComplex(nil, []*as.BatchRead{as.NewBatchRead(nil, key, []string{longBinName})})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				err = client.BatchGetComplex(nil, []*as.BatchRead{as.NewBatchReadOps(nil, key, as.GetBinOp(longBinName))})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("BatchOperate", func() {
+				err := client.BatchOperate(nil, []as.BatchRecordIfc{as.NewBatchRead(nil, key, []string{longBinName})})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				err = client.BatchOperate(nil, []as.BatchRecordIfc{as.NewBatchReadOps(nil, key, as.GetBinOp(longBinName))})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				err = client.BatchOperate(nil, []as.BatchRecordIfc{as.NewBatchWrite(nil, key, as.PutOp(as.NewBin(longBinName, 1)))})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				err = client.BatchOperate(nil, []as.BatchRecordIfc{as.NewBatchWrite(nil, key, as.AddOp(as.NewBin(longBinName, 1)))})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				err = client.BatchOperate(nil, []as.BatchRecordIfc{as.NewBatchWrite(nil, key, as.AppendOp(as.NewBin(longBinName, "1")))})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+
+				err = client.BatchOperate(nil, []as.BatchRecordIfc{as.NewBatchWrite(nil, key, as.PrependOp(as.NewBin(longBinName, "1")))})
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+			})
+
+			gg.It("Scan", func() {
+				rs, _ := client.ScanAll(nil, ns, set, longBinName)
+				for res := range rs.Results() {
+					err := res.Err
+					gm.Expect(err).To(gm.HaveOccurred())
+					gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+				}
+			})
+
+			gg.It("ScanPartitions", func() {
+				rs, _ := client.ScanPartitions(nil, nil, ns, set, longBinName)
+				for res := range rs.Results() {
+					err := res.Err
+					gm.Expect(err).To(gm.HaveOccurred())
+					gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+				}
+			})
+
+			gg.It("ScanNode", func() {
+				rs, _ := client.ScanNode(nil, nil, ns, set, longBinName)
+				for res := range rs.Results() {
+					err := res.Err
+					gm.Expect(err).To(gm.HaveOccurred())
+					gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+				}
+			})
+
+			gg.It("ScanNode", func() {
+				rs, _ := client.ScanNode(nil, nil, ns, set, longBinName)
+				for res := range rs.Results() {
+					err := res.Err
+					gm.Expect(err).To(gm.HaveOccurred())
+					gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+				}
+			})
+
+			gg.It("Query", func() {
+				stm := as.NewStatement(ns, set)
+				stm.BinNames = []string{longBinName}
+				rs, _ := client.Query(nil, stm)
+				for res := range rs.Results() {
+					err := res.Err
+					gm.Expect(err).To(gm.HaveOccurred())
+					gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+				}
+			})
+
+			gg.It("QueryPartitions", func() {
+				stm := as.NewStatement(ns, set)
+				stm.BinNames = []string{longBinName}
+				rs, _ := client.QueryPartitions(nil, stm, nil)
+				for res := range rs.Results() {
+					err := res.Err
+					gm.Expect(err).To(gm.HaveOccurred())
+					gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+				}
+			})
+
+			gg.It("QueryNode", func() {
+				stm := as.NewStatement(ns, set)
+				stm.BinNames = []string{longBinName}
+				rs, _ := client.QueryNode(nil, nil, stm)
+				for res := range rs.Results() {
+					err := res.Err
+					gm.Expect(err).To(gm.HaveOccurred())
+					gm.Expect(err.Matches(types.BIN_NAME_TOO_LONG)).To(gm.BeTrue())
+				}
+			})
 		})
 	})
 

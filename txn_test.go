@@ -742,5 +742,36 @@ var _ = gg.Describe("Aerospike", func() {
 
 			gm.Expect(getGen(client, key, nil)).To(gm.Equal(7))
 		}) // it
+
+		gg.It("must ensure MRT_VERSION_MISMATCH is always returned regardless of the number of records", func() {
+			for _, count := range []int{1, 10, 100, 1000} {
+				var keys []*as.Key
+				for i := 0; i < count; i++ {
+					key, _ := as.NewKey(ns, set, i)
+					err := client.PutBins(nil, key, as.NewBin("bin", 1000))
+					gm.Expect(err).NotTo(gm.HaveOccurred())
+					keys = append(keys, key)
+				}
+
+				txn := as.NewTxn()
+
+				for _, key := range keys {
+					p := as.NewPolicy()
+					p.Txn = txn
+					rec, err := client.Get(p, key)
+					gm.Expect(err).NotTo(gm.HaveOccurred())
+					gm.Expect(rec).NotTo(gm.BeNil())
+				}
+
+				key0, _ := as.NewKey(ns, set, 0)
+				err := client.PutBins(nil, key0, as.NewBin("bin", 999))
+				gm.Expect(err).NotTo(gm.HaveOccurred())
+
+				_, err = client.Commit(txn)
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.MRT_VERSION_MISMATCH)).To(gm.BeTrue())
+			}
+		})
+
 	}) // describe
 })

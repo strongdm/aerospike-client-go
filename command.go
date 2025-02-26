@@ -926,7 +926,9 @@ func (cmd *baseCommand) setRead(policy *BasePolicy, key *Key, binNames []string)
 		}
 
 		for i := range binNames {
-			cmd.writeOperationForBinName(binNames[i], _READ)
+			if err := cmd.writeOperationForBinName(binNames[i], _READ); err != nil {
+				return err
+			}
 		}
 		cmd.end()
 		cmd.markCompressed(policy)
@@ -1216,10 +1218,14 @@ func (cmd *baseCommand) setBatchOperateIfcOffsets(
 
 				attr.setBatchRead(client.getUsableBatchReadPolicy(br.Policy))
 				if len(br.BinNames) > 0 {
-					cmd.writeBatchBinNames(key, txn, ver, br.BinNames, attr, attr.filterExp)
+					if err := cmd.writeBatchBinNames(key, txn, ver, br.BinNames, attr, attr.filterExp); err != nil {
+						return nil, err
+					}
 				} else if br.Ops != nil {
 					attr.adjustRead(br.Ops)
-					cmd.writeBatchOperations(key, txn, ver, br.Ops, attr, attr.filterExp)
+					if err := cmd.writeBatchOperations(key, txn, ver, br.Ops, attr, attr.filterExp); err != nil {
+						return nil, err
+					}
 				} else {
 					attr.adjustReadForAllBins(br.ReadAllBins)
 					cmd.writeBatchRead(key, txn, ver, attr, attr.filterExp, 0)
@@ -1230,7 +1236,9 @@ func (cmd *baseCommand) setBatchOperateIfcOffsets(
 
 				attr.setBatchWrite(client.getUsableBatchWritePolicy(bw.Policy))
 				attr.adjustWrite(bw.Ops)
-				cmd.writeBatchOperations(key, txn, ver, bw.Ops, attr, attr.filterExp)
+				if err := cmd.writeBatchOperations(key, txn, ver, bw.Ops, attr, attr.filterExp); err != nil {
+					return nil, err
+				}
 
 			case _BRT_BATCH_UDF:
 				bu := record.(*BatchUDF)
@@ -1393,10 +1401,14 @@ func (cmd *baseCommand) setBatchOperateReadOffsets(
 			// Write full message.
 			attr.setBatchRead(client.getUsableBatchReadPolicy(record.Policy))
 			if len(record.BinNames) > 0 {
-				cmd.writeBatchBinNames(key, txn, ver, record.BinNames, attr, attr.filterExp)
+				if err := cmd.writeBatchBinNames(key, txn, ver, record.BinNames, attr, attr.filterExp); err != nil {
+					return nil, err
+				}
 			} else if record.Ops != nil {
 				attr.adjustRead(record.Ops)
-				cmd.writeBatchOperations(key, txn, ver, record.Ops, attr, attr.filterExp)
+				if err := cmd.writeBatchOperations(key, txn, ver, record.Ops, attr, attr.filterExp); err != nil {
+					return nil, err
+				}
 			} else {
 				attr.adjustReadForAllBins(record.ReadAllBins)
 				cmd.writeBatchRead(key, txn, ver, attr, attr.filterExp, 0)
@@ -1572,9 +1584,13 @@ func (cmd *baseCommand) setBatchOperateOffsets(
 		} else {
 			// Write full header, namespace and bin names.
 			if len(binNames) > 0 {
-				cmd.writeBatchBinNames(key, txn, ver, binNames, attr, nil)
+				if err := cmd.writeBatchBinNames(key, txn, ver, binNames, attr, nil); err != nil {
+					return err
+				}
 			} else if len(ops) > 0 {
-				cmd.writeBatchOperations(key, txn, ver, ops, attr, nil)
+				if err := cmd.writeBatchOperations(key, txn, ver, ops, attr, nil); err != nil {
+					return err
+				}
 			} else if (attr.writeAttr & _INFO2_DELETE) != 0 {
 				cmd.writeBatchWrite(key, txn, ver, attr, nil, 0, 0)
 			} else {
@@ -1790,12 +1806,15 @@ func (cmd *baseCommand) writeBatchBinNames(
 	binNames []string,
 	attr *batchAttr,
 	filter *Expression,
-) {
+) Error {
 	cmd.writeBatchRead(key, txn, ver, attr, filter, len(binNames))
 
 	for i := range binNames {
-		cmd.writeOperationForBinName(binNames[i], _READ)
+		if err := cmd.writeOperationForBinName(binNames[i], _READ); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (cmd *baseCommand) writeBatchOperations(
@@ -1805,7 +1824,7 @@ func (cmd *baseCommand) writeBatchOperations(
 	ops []*Operation,
 	attr *batchAttr,
 	filter *Expression,
-) {
+) Error {
 	if attr.hasWrite {
 		cmd.writeBatchWrite(key, txn, ver, attr, filter, 0, len(ops))
 	} else {
@@ -1813,8 +1832,11 @@ func (cmd *baseCommand) writeBatchOperations(
 	}
 
 	for i := range ops {
-		cmd.writeOperationForOperation(ops[i])
+		if err := cmd.writeOperationForOperation(ops[i]); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (cmd *baseCommand) writeBatchRead(
@@ -1990,7 +2012,9 @@ func (cmd *baseCommand) setBatchRead(policy *BatchPolicy, keys []*Key, batch *ba
 				cmd.WriteByte(byte(readAttr))
 				cmd.writeBatchFields(key, 0, len(binNames))
 				for _, binName := range binNames {
-					cmd.writeOperationForBinName(binName, _READ)
+					if err := cmd.writeOperationForBinName(binName, _READ); err != nil {
+						return err
+					}
 				}
 			} else if len(ops) > 0 {
 				offset := cmd.dataOffset
@@ -2131,7 +2155,9 @@ func (cmd *baseCommand) setBatchIndexRead(policy *BatchPolicy, records []*BatchR
 				cmd.WriteByte(byte(readAttr))
 				cmd.writeBatchFields(key, 0, len(binNames))
 				for _, binName := range binNames {
-					cmd.writeOperationForBinName(binName, _READ)
+					if err := cmd.writeOperationForBinName(binName, _READ); err != nil {
+						return err
+					}
 				}
 			} else if len(ops) > 0 {
 				offset := cmd.dataOffset
@@ -2406,7 +2432,9 @@ func (cmd *baseCommand) setScan(policy *ScanPolicy, namespace *string, setName *
 	cmd.WriteUint64(taskID)
 
 	for i := range binNames {
-		cmd.writeOperationForBinName(binNames[i], _READ)
+		if err := cmd.writeOperationForBinName(binNames[i], _READ); err != nil {
+			return err
+		}
 	}
 
 	cmd.end()
@@ -2758,7 +2786,9 @@ func (cmd *baseCommand) setQuery(policy *QueryPolicy, wpolicy *WritePolicy, stat
 	} else if len(statement.BinNames) > 0 && (isNew || statement.Filter == nil) {
 		// scan binNames come last
 		for _, binName := range statement.BinNames {
-			cmd.writeOperationForBinName(binName, _READ)
+			if err := cmd.writeOperationForBinName(binName, _READ); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -3180,6 +3210,9 @@ func (cmd *baseCommand) writeKey(key *Key) Error {
 
 func (cmd *baseCommand) writeOperationForBin(bin *Bin, operation OperationType) Error {
 	nameLength := copy(cmd.dataBuffer[(cmd.dataOffset+int(_OPERATION_HEADER_SIZE)):], bin.Name)
+	if nameLength > 15 {
+		return newError(types.BIN_NAME_TOO_LONG, fmt.Sprintf("Bin name `%s` too long, it cannot be longer than 15 bytes.", bin.Name))
+	}
 
 	valueLength, err := bin.Value.EstimateSize()
 	if err != nil {
@@ -3198,6 +3231,9 @@ func (cmd *baseCommand) writeOperationForBin(bin *Bin, operation OperationType) 
 
 func (cmd *baseCommand) writeOperationForBinNameAndValue(name string, val interface{}, operation OperationType) Error {
 	nameLength := copy(cmd.dataBuffer[(cmd.dataOffset+int(_OPERATION_HEADER_SIZE)):], name)
+	if nameLength > 15 {
+		return newError(types.BIN_NAME_TOO_LONG, fmt.Sprintf("Bin name `%s` too long, it cannot be longer than 15 bytes.", name))
+	}
 
 	v := NewValue(val)
 
@@ -3238,6 +3274,9 @@ func (cmd *baseCommand) writeBatchReadOperations(ops []*Operation, readAttr int)
 
 func (cmd *baseCommand) writeOperationForOperation(operation *Operation) Error {
 	nameLength := copy(cmd.dataBuffer[(cmd.dataOffset+int(_OPERATION_HEADER_SIZE)):], operation.binName)
+	if nameLength > 15 {
+		return newError(types.BIN_NAME_TOO_LONG, fmt.Sprintf("Bin name `%s` too long, it cannot be longer than 15 bytes.", operation.binName))
+	}
 
 	if operation.encoder == nil {
 		valueLength, err := operation.binValue.EstimateSize()
@@ -3270,14 +3309,18 @@ func (cmd *baseCommand) writeOperationForOperation(operation *Operation) Error {
 	return err
 }
 
-func (cmd *baseCommand) writeOperationForBinName(name string, operation OperationType) {
+func (cmd *baseCommand) writeOperationForBinName(name string, operation OperationType) Error {
 	nameLength := copy(cmd.dataBuffer[(cmd.dataOffset+int(_OPERATION_HEADER_SIZE)):], name)
+	if nameLength > 15 {
+		return newError(types.BIN_NAME_TOO_LONG, fmt.Sprintf("Bin name `%s` too long, it cannot be longer than 15 bytes.", name))
+	}
 	cmd.WriteInt32(int32(nameLength + 4))
 	cmd.WriteByte((operation.op))
 	cmd.WriteByte(byte(0))
 	cmd.WriteByte(byte(0))
 	cmd.WriteByte(byte(nameLength))
 	cmd.dataOffset += nameLength
+	return nil
 }
 
 func (cmd *baseCommand) writeOperationForOperationType(operation OperationType) {
@@ -3553,7 +3596,7 @@ func (cmd *baseCommand) executeIter(ifc command, iter int) Error {
 	deadline := policy.deadline()
 
 	err := cmd.executeAt(ifc, policy, deadline, iter)
-	if err.IsInDoubt() {
+	if err != nil && err.IsInDoubt() {
 		cmd.onInDoubt()
 	}
 	return err
