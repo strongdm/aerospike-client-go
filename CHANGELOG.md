@@ -1,5 +1,18 @@
 # Change History
 
+## February 26 2025: v8.1.0
+
+- **New Features**
+  - [CLIENT-3334] Support old PHP7 client encoded boolean and null values.
+
+- **Fixes**
+  - [CLIENT-3347] MRT error occurrence varies depending on the number of records. PR #465, thanks to [Yevgeny Rizhkov](https://github.com/reugn)
+  - [CLIENT-3348] Parsing error during node rack update.
+  - Fix `nil` check for error in `executeIter` method. PR #465, thanks to [Oleksii](https://github.com/lesha888)
+
+- **Improvements**
+  - [CLIENT-3349] Reject BinNames > 15 bytes on client-side.
+
 ## February 5 2025: v8.0.1
 
 - **Fixes**
