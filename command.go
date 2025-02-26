@@ -3553,7 +3553,7 @@ func (cmd *baseCommand) executeIter(ifc command, iter int) Error {
 	deadline := policy.deadline()
 
 	err := cmd.executeAt(ifc, policy, deadline, iter)
-	if err.IsInDoubt() {
+	if err != nil && err.IsInDoubt() {
 		cmd.onInDoubt()
 	}
 	return err
