@@ -40,8 +40,11 @@ type MultiPolicy struct {
 	MaxRecords int64
 
 	// RecordsPerSecond limits returned records per second (rps) rate for each server.
-	// Will not apply rps limit if recordsPerSecond is zero (default).
-	// Currently only applicable to a query without a defined filter.
+	// It does not apply rps limit if RecordsPerSecond is zero (default).
+	//
+	// RecordsPerSecond is supported in all primary and secondary index
+	// queries in server versions 6.0+. For background queries, RecordsPerSecond
+	// is bounded by the server config background-query-max-rps.
 	RecordsPerSecond int
 
 	// Number of records to place in queue before blocking.
