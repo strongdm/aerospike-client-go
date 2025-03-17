@@ -172,6 +172,9 @@ func (tm *TxnMonitor) copyTimeoutPolicy(policy *BasePolicy) *WritePolicy {
 }
 
 func getTxnMonitorKey(txn *Txn) *Key {
-	key, _ := NewKey(txn.GetNamespace(), "<ERO~MRT", txn.Id())
-	return key
+	if txn.GetNamespace() != nil {
+		key, _ := NewKey(*txn.GetNamespace(), "<ERO~MRT", txn.Id())
+		return key
+	}
+	return nil
 }
