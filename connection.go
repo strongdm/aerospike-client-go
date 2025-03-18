@@ -263,14 +263,6 @@ func (ctn *Connection) Read(buf []byte, length int) (total int, aerr Error) {
 		}
 		total += r
 		if err != nil {
-			time.Sleep(time.Millisecond)
-			if netErr, ok := err.(net.Error); ok {
-				if netErr.Timeout() && r > 0 {
-					// We had a timeout, but we also read some data;
-					// Continue to read as long as the totalDeadline is not reached
-					continue
-				}
-			}
 			break
 		}
 	}
