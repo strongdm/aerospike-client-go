@@ -858,6 +858,10 @@ func (clnt *Client) BatchOperate(policy *BatchPolicy, records []BatchRecordIfc) 
 		return err
 	}
 
+	if len(batchNodes) == 0 {
+		return newError(types.INVALID_NAMESPACE)
+	}
+
 	cmd := newBatchCommandOperate(clnt, nil, policy, records)
 	_, err = clnt.batchExecute(policy, batchNodes, &cmd)
 	return err

@@ -165,9 +165,7 @@ func (h *singleConnectionHeap) RefreshIdleTail(tendInterval time.Duration) bool 
 
 			// refresh in a goroutine asynchronously
 			go func() {
-				timeout := time.Second
-				deadline := time.Now().Add(timeout)
-				conn.SetTimeout(deadline, timeout)
+				conn.SetTimeout(time.Second, time.Second)
 				conn.refresh()
 				if _, err := conn.RequestInfo("build"); err == nil {
 					// return to the pool

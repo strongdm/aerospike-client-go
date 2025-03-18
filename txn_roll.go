@@ -47,7 +47,7 @@ func (txr *TxnRoll) Verify(verifyPolicy, rollPolicy *BatchPolicy) Error {
 
 			txnKey := getTxnMonitorKey(txr.txn)
 			if err := txr.Close(writePolicy, txnKey); err != nil {
-				return NewTxnCommitError(CommitErrorVerifyFailAbortAbandoned, txr.verifyRecords, txr.rollRecords, err)
+				return NewTxnCommitError(CommitErrorVerifyFailCloseAbandoned, txr.verifyRecords, txr.rollRecords, err)
 			}
 		}
 
@@ -65,7 +65,7 @@ func (txr *TxnRoll) Commit(rollPolicy *BatchPolicy) (CommitStatus, Error) {
 
 	if txr.txn.MonitorExists() {
 		if err := txr.MarkRollForward(writePolicy, txnKey); err != nil {
-			aec := NewTxnCommitError(CommitErrorVerifyFailAbortAbandoned, txr.verifyRecords, txr.rollRecords, err)
+			aec := NewTxnCommitError(CommitErrorMarkRollForwardAbandoned, txr.verifyRecords, txr.rollRecords, err)
 
 			if err.resultCode() == types.MRT_ABORTED {
 				aec.markInDoubt(false)

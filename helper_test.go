@@ -14,6 +14,12 @@
 
 package aerospike
 
+import "time"
+
+func DefaultTimeout() time.Duration {
+	return _DEFAULT_TIMEOUT
+}
+
 func ParseInfoErrorCode(response string) Error {
 	return parseInfoErrorCode(response)
 }
@@ -96,4 +102,9 @@ func (cmd *deleteCommand) WriteBuffer(ifc command) Error {
 
 func (cmd *deleteCommand) Buffer() []byte {
 	return cmd.dataBuffer[:cmd.dataOffset]
+}
+
+func (ctn *Connection) UpdateDeadline() (time.Time, time.Time, time.Duration, Error) {
+	err := ctn.updateDeadline()
+	return ctn.deadline, ctn.socketDeadline, ctn.socketTimeout, err
 }

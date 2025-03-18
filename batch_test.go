@@ -427,6 +427,21 @@ var _ = gg.Describe("Aerospike", func() {
 				// gm.Expect(err.Matches(types.BATCH_MAX_REQUESTS_EXCEEDED)).To(gm.BeTrue())
 			})
 
+			gg.It("XXXShould return the error for invalid namespace", func() {
+				var brs []as.BatchRecordIfc
+
+				for i := 0; i < 1; i++ {
+					key, _ := as.NewKey("non_exist", "non_exist", i)
+					brr := as.NewBatchReadOps(nil, key, []*as.Operation{as.GetBinOp("i_bin")}...)
+					brs = append(brs, brr)
+				}
+
+				bp := as.NewBatchPolicy()
+				err := client.BatchOperate(bp, brs)
+				gm.Expect(err).To(gm.HaveOccurred())
+				gm.Expect(err.Matches(types.INVALID_NAMESPACE)).To(gm.BeTrue())
+			})
+
 			gg.It("Overall command error should be reflected in API call error and not BatchRecord error", func() {
 				var batchRecords []as.BatchRecordIfc
 				key, _ := as.NewKey(*namespace, set, 0)

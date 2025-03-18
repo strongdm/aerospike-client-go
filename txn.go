@@ -173,8 +173,8 @@ func (txn *Txn) WriteExistsForKey(key *Key) bool {
 }
 
 // Return Transaction namespace.
-func (txn *Txn) GetNamespace() string {
-	return *txn.namespace
+func (txn *Txn) GetNamespace() *string {
+	return txn.namespace
 }
 
 // Verify current Transaction state and namespace for a future read command.

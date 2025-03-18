@@ -45,8 +45,9 @@ func NewTxnCommitError(err CommitError, verifyRecords, rollRecords []*BatchRecor
 		}
 	}
 
+	embed := newError(types.TXN_FAILED, string(err)).wrap(cause)
 	return &TxnError{
-		AerospikeError: *(cause.(*AerospikeError)),
+		AerospikeError: *(embed.(*AerospikeError)),
 		CommitError:    err,
 		VerifyRecords:  verifyRecords,
 		RollRecords:    rollRecords,

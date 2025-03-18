@@ -30,7 +30,7 @@ import (
 // ALL tests are isolated by SetName and Key, which are 50 random characters
 var _ = gg.Describe("Aerospike", func() {
 
-	gg.Describe("Multi Record Transaction (Transaction) operations", gg.Ordered, func() {
+	gg.Describe("Multi Record Transaction operations", gg.Ordered, func() {
 		var ns = *namespace
 		var set = randString(50)
 		const binName = "bin"
@@ -75,6 +75,26 @@ var _ = gg.Describe("Aerospike", func() {
 			gm.Expect(err).ToNot(gm.HaveOccurred())
 			gm.Expect(<-regTask.OnComplete()).ToNot(gm.HaveOccurred())
 		})
+
+		gg.Context("must support empty transactions", func() {
+
+			gg.It("Committing should not panic", func() {
+				txn := as.NewTxn()
+
+				status, err := client.Commit(txn)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+				gm.Expect(status).To(gm.Equal(as.CommitStatusOK))
+			}) // it
+
+			gg.It("Canceling should not panic", func() {
+				txn := as.NewTxn()
+
+				status, err := client.Abort(txn)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+				gm.Expect(status).To(gm.Equal(as.AbortStatusOK))
+			}) // it
+
+		}) // Context
 
 		gg.It("must write and commit", func() {
 			key, _ := as.NewKey(ns, set, randString(50))

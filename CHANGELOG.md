@@ -1,5 +1,16 @@
 # Change History
 
+## March 18 2025: v8.2.0
+
+- **Fixes**
+  - [CLIENT-3379] Setting `TotalTimeout` to 0 causes Scan / Query to fail (timeout).
+  - [CLIENT-3376] `BatchRead` on Non-Existing namespace with transaction policy does not throw expected error.
+  - [CLIENT-3353] Insufficient Error Messages from MRT commit failure.
+  - [CLIENT-3374] Fix panic when trying to commit a MRT with no read and write transaction.
+
+- **Improvements**
+  - [CLIENT-3361] Update documentation for `RecordsPerSecond` scan/query policy.
+
 ## February 26 2025: v8.1.0
 
 - **New Features**
