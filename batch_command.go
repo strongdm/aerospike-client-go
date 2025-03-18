@@ -14,17 +14,13 @@
 
 package aerospike
 
-import (
-	"time"
-)
-
 type batcher interface {
 	command
 
 	cloneBatchCommand(batch *batchNode) batcher
 	filteredOut() int
 
-	retryBatch(ifc batcher, cluster *Cluster, deadline time.Time, iteration int) (bool, Error)
+	retryBatch(ifc batcher, cluster *Cluster, iteration int) (bool, Error)
 	generateBatchNodes(*Cluster) ([]*batchNode, Error)
 	setSequence(int, int)
 
@@ -75,7 +71,7 @@ func (cmd *batchCommand) prepareRetry(ifc command, isTimeout bool) bool {
 	return false
 }
 
-func (cmd *batchCommand) retryBatch(ifc batcher, cluster *Cluster, deadline time.Time, iteration int) (bool, Error) {
+func (cmd *batchCommand) retryBatch(ifc batcher, cluster *Cluster, iteration int) (bool, Error) {
 	// Retry requires keys for this node to be split among other nodes.
 	// This is both recursive and exponential.
 	batchNodes, err := ifc.generateBatchNodes(cluster)
