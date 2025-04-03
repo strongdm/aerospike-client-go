@@ -32,11 +32,13 @@ type ClientPolicy struct {
 	Password string
 
 	// ClusterName sets the expected cluster ID.  If not nil, server nodes must return this cluster ID in order to
+	// ClusterName sets the expected cluster ID. If not nil, server nodes must return this cluster ID in order to
 	// join the client's view of the cluster. Should only be set when connecting to servers that
 	// support the "cluster-name" info command. (v3.10+)
 	ClusterName string //=""
 
 	// Initial host connection timeout duration.  The timeout when opening a connection
+	// Initial host connection timeout duration. The timeout when opening a connection
 	// to the server host for the first time.
 	Timeout time.Duration //= 30 seconds
 
@@ -116,6 +118,7 @@ type ClientPolicy struct {
 
 	// A IP translation table is used in cases where different clients
 	// use different server IP addresses.  This may be necessary when
+	// use different server IP addresses. This may be necessary when
 	// using clients from both inside and outside a local area
 	// network. Default is no translation.
 	// The key is the IP address returned from friend info requests to other servers.
@@ -126,6 +129,7 @@ type ClientPolicy struct {
 	// in info request during cluster tending.
 	//"services-alternate" returns server configured external IP addresses that client
 	// uses to talk to nodes.  "services-alternate" can be used in place of providing a client "ipMap".
+	// uses to talk to nodes. "services-alternate" can be used in place of providing a client "ipMap".
 	// This feature is recommended instead of using the client-side IpMap above.
 	//
 	// "services-alternate" is available with Aerospike Server versions >= 3.7.1.

@@ -782,6 +782,11 @@ func (vl FloatValue) String() string {
 // Supported by Aerospike server v5.6+ only.
 type BoolValue bool
 
+// NewBoolValue generates a BoolValue instance.
+func NewBoolValue(b bool) BoolValue {
+	return BoolValue(b)
+}
+
 // EstimateSize returns the size of the BoolValue in wire protocol.
 func (vb BoolValue) EstimateSize() (int, Error) {
 	return PackBool(nil, bool(vb))
