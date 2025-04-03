@@ -170,6 +170,7 @@ func newConnection(address string, timeout time.Duration) (*Connection, Error) {
 // an error will be returned
 func NewConnection(policy *ClientPolicy, host *Host) (*Connection, Error) {
 	address := net.JoinHostPort(host.Name, strconv.Itoa(host.Port))
+	conn, err := newConnection(address, policy.Timeout)
 	if err != nil {
 		return nil, err
 	}
