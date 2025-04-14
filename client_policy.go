@@ -115,7 +115,6 @@ type ClientPolicy struct {
 	TendInterval time.Duration //= 1 second
 
 	// A IP translation table is used in cases where different clients
-	// use different server IP addresses.  This may be necessary when
 	// use different server IP addresses. This may be necessary when
 	// using clients from both inside and outside a local area
 	// network. Default is no translation.
