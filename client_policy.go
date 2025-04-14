@@ -31,13 +31,11 @@ type ClientPolicy struct {
 	// in hashed format. Leave empty for clusters running without restricted access.
 	Password string
 
-	// ClusterName sets the expected cluster ID.  If not nil, server nodes must return this cluster ID in order to
 	// ClusterName sets the expected cluster ID. If not nil, server nodes must return this cluster ID in order to
 	// join the client's view of the cluster. Should only be set when connecting to servers that
 	// support the "cluster-name" info command. (v3.10+)
 	ClusterName string //=""
 
-	// Initial host connection timeout duration.  The timeout when opening a connection
 	// Initial host connection timeout duration. The timeout when opening a connection
 	// to the server host for the first time.
 	Timeout time.Duration //= 30 seconds
