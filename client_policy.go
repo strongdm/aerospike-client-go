@@ -125,7 +125,6 @@ type ClientPolicy struct {
 	// UseServicesAlternate determines if the client should use "services-alternate" instead of "services"
 	// in info request during cluster tending.
 	//"services-alternate" returns server configured external IP addresses that client
-	// uses to talk to nodes.  "services-alternate" can be used in place of providing a client "ipMap".
 	// uses to talk to nodes. "services-alternate" can be used in place of providing a client "ipMap".
 	// This feature is recommended instead of using the client-side IpMap above.
 	//
