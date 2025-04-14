@@ -472,7 +472,7 @@ var _ = gg.Describe("Aerospike", func() {
 
 				binMap := as.BinMap{
 					"Aerospike":  "value",
-					"Aerospike1": "value2",
+					"Aerospike1": strings.Repeat("a", 1e5+1e4),
 				}
 
 				wcmd, err := as.NewWriteCommand(nil, wpolicy, key, nil, binMap)

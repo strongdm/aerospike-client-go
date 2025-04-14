@@ -793,5 +793,52 @@ var _ = gg.Describe("Aerospike", func() {
 			}
 		})
 
+		gg.It("must succeed BatchGet with expressions and transaction", func() {
+			client.Truncate(nil, "test", "", nil)
+
+			startKey := 0
+			endKey := 999
+			num := 300 // example value, change to test others like 0, 600, 1010
+			// Generate keys
+			keys := make([]*as.Key, 0, endKey-startKey+1)
+			for i := startKey; i <= endKey; i++ {
+				key, err := as.NewKey(ns, set, i)
+				gm.Expect(err).ToNot(gm.HaveOccurred())
+
+				keys = append(keys, key)
+			}
+
+			// Create the expression: bin_i > num
+			expr := as.ExpGreater(
+				as.ExpIntBin("bin_i"),
+				as.ExpIntVal(int64(num)),
+			)
+
+			// Create MRT transaction
+			txn := as.NewTxn()
+
+			// Create policy with expression and txn
+			policy := as.NewBatchPolicy()
+			policy.BasePolicy = *as.NewPolicy()
+			policy.FilterExpression = expr
+			policy.Txn = txn
+
+			// Perform BatchGet
+			records, err := client.BatchGet(policy, keys)
+			gm.Expect(err).ToNot(gm.HaveOccurred())
+
+			// Check filtered-in records
+			for _, rec := range records {
+				if rec != nil {
+					val := rec.Bins["bin_i"]
+					gm.Expect(val).NotTo(gm.BeNil())
+					gm.Expect(val.(int)).To(gm.BeNumerically(">", num))
+				}
+			}
+
+			_, err = client.Commit(txn)
+			gm.Expect(err).ToNot(gm.HaveOccurred())
+		})
+
 	}) // describe
 })

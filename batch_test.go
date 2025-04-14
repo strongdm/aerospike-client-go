@@ -427,7 +427,7 @@ var _ = gg.Describe("Aerospike", func() {
 				// gm.Expect(err.Matches(types.BATCH_MAX_REQUESTS_EXCEEDED)).To(gm.BeTrue())
 			})
 
-			gg.It("XXXShould return the error for invalid namespace", func() {
+			gg.It("Should return the error for invalid namespace", func() {
 				var brs []as.BatchRecordIfc
 
 				for i := 0; i < 1; i++ {

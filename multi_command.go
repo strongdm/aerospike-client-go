@@ -247,7 +247,7 @@ func (cmd *baseMultiCommand) parseVersion(fieldCount int) (*uint64, Error) {
 		size := fieldlen - 1
 
 		if fieldType == RECORD_VERSION && size == 7 {
-			version = Buffer.VersionBytesToUint64(cmd.dataBuffer, cmd.dataOffset)
+			version = Buffer.VersionBytesToUint64(cmd.dataBuffer, 1)
 		}
 	}
 	return version, nil

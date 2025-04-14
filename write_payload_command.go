@@ -60,8 +60,10 @@ func (cmd *writePayloadCommand) getPolicy(ifc command) Policy {
 }
 
 func (cmd *writePayloadCommand) writeBuffer(ifc command) Error {
-	cmd.dataBuffer = cmd.payload
-	cmd.dataOffset = len(cmd.payload)
+	if err := cmd.sizeBufferSz(len(cmd.payload), false); err != nil {
+		return err
+	}
+	cmd.dataOffset = copy(cmd.dataBuffer, cmd.payload)
 	return nil
 }
 
@@ -75,12 +77,6 @@ func (cmd *writePayloadCommand) prepareRetry(ifc command, isTimeout bool) bool {
 }
 
 func (cmd *writePayloadCommand) parseResult(ifc command, conn *Connection) Error {
-	// make sure the payload is not put back in the buffer pool
-	defer func() {
-		cmd.dataBuffer = cmd.conn.origDataBuffer
-		cmd.dataOffset = 0
-	}()
-
 	// Read header.
 	if _, err := conn.Read(cmd.dataBuffer, int(_MSG_TOTAL_HEADER_SIZE)); err != nil {
 		return err

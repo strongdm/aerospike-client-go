@@ -1,5 +1,15 @@
 # Change History
 
+## April 14 2025: v8.2.1
+
+- **Improvements**
+  - [CLIENT-3399] Update dependencies due to snyk security reports.
+
+- **Fixes**
+  - [CLIENT-3384] Panic in BatchGet with using MRT and Filter Expression together.
+  - [CLIENT-3397] Retries fail on PutPayload command.
+  - [CLIENT-3398] Fix Backward compatibility broken in Connection.SetTimeout API
+
 ## March 18 2025: v8.2.0
 
 - **Fixes**

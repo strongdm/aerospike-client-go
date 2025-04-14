@@ -198,6 +198,6 @@ func CtxMapKeyCreate(key Value, order mapOrderType) *CDTContext {
 }
 
 // CtxMapValue defines Lookup map by value.
-func CtxMapValue(key Value) *CDTContext {
-	return &CDTContext{ctxTypeMapValue, key}
+func CtxMapValue(value Value) *CDTContext {
+	return &CDTContext{ctxTypeMapValue, value}
 }
