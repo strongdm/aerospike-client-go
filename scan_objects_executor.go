@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-func (clnt *Client) scanPartitionObjects(policy *ScanPolicy, tracker *partitionTracker, namespace string, setName string, rs *Recordset, binNames ...string) Error {
+func (clnt *Client) scanPartitionObjects(policy *ScanPolicy, tracker *PartitionTracker, namespace string, setName string, rs *Recordset, binNames ...string) Error {
 	defer rs.signalEnd()
 
 	// for exponential backoff
@@ -31,7 +31,7 @@ func (clnt *Client) scanPartitionObjects(policy *ScanPolicy, tracker *partitionT
 
 	for {
 		rs.resetTaskID()
-		list, err := tracker.assignPartitionsToNodes(clnt.Cluster(), namespace)
+		list, err := tracker.AssignPartitionsToNodes(clnt.Cluster(), namespace)
 		if err != nil {
 			tracker.partitionError()
 			return err
@@ -55,12 +55,12 @@ func (clnt *Client) scanPartitionObjects(policy *ScanPolicy, tracker *partitionT
 			if err := sem.Acquire(ctx, 1); err != nil {
 				logger.Logger.Error("Constraint Semaphore failed for Scan: %s", err.Error())
 			}
-			go func(nodePartition *nodePartitions) {
+			go func(nodePartition *NodePartitions) {
 				defer sem.Release(1)
 				defer wg.Done()
 				if err := clnt.scanNodePartitionObjects(policy, rs, tracker, nodePartition, namespace, setName, binNames...); err != nil {
 					tracker.partitionError()
-					logger.Logger.Debug("Error while Executing scan for node %s: %s", nodePartition.node.String(), err.Error())
+					logger.Logger.Debug("Error while Executing scan for node %s: %s", nodePartition.Node.String(), err.Error())
 				}
 			}(nodePartition)
 		}
@@ -90,7 +90,7 @@ func (clnt *Client) scanPartitionObjects(policy *ScanPolicy, tracker *partitionT
 
 // ScanNode reads all records in specified namespace and set for one node only.
 // If the policy is nil, the default relevant policy will be used.
-func (clnt *Client) scanNodePartitionObjects(policy *ScanPolicy, recordset *Recordset, tracker *partitionTracker, nodePartition *nodePartitions, namespace string, setName string, binNames ...string) Error {
+func (clnt *Client) scanNodePartitionObjects(policy *ScanPolicy, recordset *Recordset, tracker *PartitionTracker, nodePartition *NodePartitions, namespace string, setName string, binNames ...string) Error {
 	command := newScanPartitionObjectsCommand(policy, tracker, nodePartition, namespace, setName, binNames, recordset)
 	return command.Execute()
 }

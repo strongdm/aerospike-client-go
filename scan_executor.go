@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-func (clnt *Client) scanPartitions(policy *ScanPolicy, tracker *partitionTracker, namespace string, setName string, recordset *Recordset, binNames ...string) {
+func (clnt *Client) scanPartitions(policy *ScanPolicy, tracker *PartitionTracker, namespace string, setName string, recordset *Recordset, binNames ...string) {
 	defer recordset.signalEnd()
 
 	// for exponential backoff
@@ -26,7 +26,7 @@ func (clnt *Client) scanPartitions(policy *ScanPolicy, tracker *partitionTracker
 
 	var errs Error
 	for {
-		list, err := tracker.assignPartitionsToNodes(clnt.Cluster(), namespace)
+		list, err := tracker.AssignPartitionsToNodes(clnt.Cluster(), namespace)
 		if err != nil {
 			errs = chainErrors(err, errs)
 			recordset.sendError(errs)

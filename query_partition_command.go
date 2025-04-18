@@ -18,8 +18,8 @@ type queryPartitionCommand queryCommand
 
 func newQueryPartitionCommand(
 	policy *QueryPolicy,
-	tracker *partitionTracker,
-	nodePartitions *nodePartitions,
+	tracker *PartitionTracker,
+	nodePartitions *NodePartitions,
 	statement *Statement,
 	recordset *Recordset,
 ) *queryPartitionCommand {
@@ -34,7 +34,7 @@ func newQueryPartitionCommand(
 	cmd.terminationErrorType = statement.terminationError()
 	cmd.tracker = tracker
 	cmd.nodePartitions = nodePartitions
-	cmd.node = nodePartitions.node
+	cmd.node = nodePartitions.Node
 
 	return cmd
 }

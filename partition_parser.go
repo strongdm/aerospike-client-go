@@ -36,7 +36,7 @@ var partitionMapLock sync.Mutex
 
 // Parse node's master (and optionally prole) partitions.
 type partitionParser struct {
-	pmap           partitionMap
+	pmap           PartitionMap
 	buffer         []byte
 	partitionCount int
 	generation     int
@@ -46,7 +46,7 @@ type partitionParser struct {
 	regimeError bool
 }
 
-func newPartitionParser(node *Node, partitions partitionMap, partitionCount int) (*partitionParser, Error) {
+func newPartitionParser(node *Node, partitions PartitionMap, partitionCount int) (*partitionParser, Error) {
 	newPartitionParser := &partitionParser{
 		partitionCount: partitionCount,
 	}

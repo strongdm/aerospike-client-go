@@ -55,7 +55,7 @@ type Cluster struct {
 	metricsPolicy  iatomic.TypedVal[*MetricsPolicy]
 
 	// Hints for best node for a partition
-	partitionWriteMap iatomic.TypedVal[partitionMap] //partitionMap
+	partitionWriteMap iatomic.TypedVal[PartitionMap] //PartitionMap
 
 	clientPolicy        ClientPolicy
 	infoPolicy          InfoPolicy
@@ -130,7 +130,7 @@ func NewCluster(policy *ClientPolicy, hosts []*Host) (*Cluster, Error) {
 		supportsPartitionQuery: *iatomic.NewBool(false),
 	}
 
-	newCluster.partitionWriteMap.Set(make(partitionMap))
+	newCluster.partitionWriteMap.Set(make(PartitionMap))
 
 	// setup auth info for cluster
 	if policy.RequiresAuthentication() {
@@ -234,7 +234,7 @@ func (clstr *Cluster) AddSeeds(hosts []*Host) {
 
 // Healthy returns an error if the cluster is not healthy.
 func (clstr *Cluster) Healthy() Error {
-	p := clstr.getPartitions()
+	p := clstr.GetPartitions()
 	if p == nil {
 		return ErrInvalidPartitionMap.err()
 	}
@@ -277,7 +277,7 @@ func (clstr *Cluster) tend() Error {
 		})
 	}
 
-	var partMap iatomic.Guard[partitionMap]
+	var partMap iatomic.Guard[PartitionMap]
 
 	// find the first host that connects
 	seq.ParDo(peers.peers(), func(_peer *peer) {
@@ -307,7 +307,7 @@ func (clstr *Cluster) tend() Error {
 			// Create new node.
 			node := clstr.createNode(&nv)
 			peers.addNode(nv.name, node)
-			partMap.InitDoVal(clstr.getPartitions().clone, func(partMap partitionMap) {
+			partMap.InitDoVal(clstr.GetPartitions().clone, func(partMap PartitionMap) {
 				node.refreshPartitions(peers, partMap, true)
 			})
 			return seq.Break
@@ -317,7 +317,7 @@ func (clstr *Cluster) tend() Error {
 	// Refresh partition map when necessary.
 	seq.ParDo(nodes, func(node *Node) {
 		if node.partitionChanged.Get() {
-			partMap.InitDoVal(clstr.getPartitions().clone, func(partMap partitionMap) {
+			partMap.InitDoVal(clstr.GetPartitions().clone, func(partMap PartitionMap) {
 				node.refreshPartitions(peers, partMap, false)
 			})
 		}
@@ -350,7 +350,7 @@ func (clstr *Cluster) tend() Error {
 		clstr.setPartitions(*partMap.Release())
 	}
 
-	if err := clstr.getPartitions().validate(); err != nil {
+	if err := clstr.GetPartitions().validate(); err != nil {
 		logger.Logger.Error("Error validating the cluster partition map after tend: %s", err.Error())
 	}
 
@@ -487,7 +487,7 @@ func (clstr *Cluster) findAlias(alias *Host) *Node {
 	return clstr.aliases.Get(*alias)
 }
 
-func (clstr *Cluster) setPartitions(partMap partitionMap) {
+func (clstr *Cluster) setPartitions(partMap PartitionMap) {
 	if err := partMap.validate(); err != nil {
 		logger.Logger.Error("Partition map error: %s.", err.Error())
 	}
@@ -495,7 +495,7 @@ func (clstr *Cluster) setPartitions(partMap partitionMap) {
 	clstr.partitionWriteMap.Set(partMap)
 }
 
-func (clstr *Cluster) getPartitions() partitionMap {
+func (clstr *Cluster) GetPartitions() PartitionMap {
 	return clstr.partitionWriteMap.Get()
 }
 
@@ -649,7 +649,7 @@ func (clstr *Cluster) findNodesToRemove(refreshCount int) []*Node {
 }
 
 func (clstr *Cluster) findNodeInPartitionMap(filter *Node) bool {
-	partMap := clstr.getPartitions()
+	partMap := clstr.GetPartitions()
 
 	for _, partitions := range partMap {
 		for _, nodeArray := range partitions.Replicas {
@@ -854,7 +854,7 @@ func (clstr *Cluster) Close() {
 
 		// remove node references from the partition table
 		// to allow GC to work its magic. Leaks otherwise.
-		clstr.getPartitions().cleanup()
+		clstr.GetPartitions().cleanup()
 	}
 }
 

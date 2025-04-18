@@ -60,7 +60,7 @@ func (nd *Node) CloseConnections() {
 // PartitionForWrite returns a partition for write purposes
 func ConfiguredAsStrongConsistency(client *Client, namespace string) bool {
 	// Must copy hashmap reference for copy on write semantics to work.
-	pmap := client.cluster.getPartitions()
+	pmap := client.cluster.GetPartitions()
 	p := pmap[namespace]
 	if p == nil {
 		return false

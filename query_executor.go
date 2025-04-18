@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-func (clnt *Client) queryPartitions(policy *QueryPolicy, tracker *partitionTracker, statement *Statement, recordset *Recordset) {
+func (clnt *Client) queryPartitions(policy *QueryPolicy, tracker *PartitionTracker, statement *Statement, recordset *Recordset) {
 	defer recordset.signalEnd()
 
 	// for exponential backoff
@@ -26,7 +26,7 @@ func (clnt *Client) queryPartitions(policy *QueryPolicy, tracker *partitionTrack
 
 	var errs Error
 	for {
-		list, err := tracker.assignPartitionsToNodes(clnt.Cluster(), statement.Namespace)
+		list, err := tracker.AssignPartitionsToNodes(clnt.Cluster(), statement.Namespace)
 		if err != nil {
 			errs = chainErrors(err, errs)
 			recordset.sendError(errs)

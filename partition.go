@@ -57,7 +57,7 @@ func NewPartitionForReplicaPolicy(namespace string, replica ReplicaPolicy) *Part
 // PartitionForWrite returns a partition for write purposes
 func PartitionForWrite(cluster *Cluster, policy *BasePolicy, key *Key) (*Partition, Error) {
 	// Must copy hashmap reference for copy on write semantics to work.
-	pmap := cluster.getPartitions()
+	pmap := cluster.GetPartitions()
 	partitions := pmap[key.namespace]
 
 	if partitions == nil {
@@ -70,7 +70,7 @@ func PartitionForWrite(cluster *Cluster, policy *BasePolicy, key *Key) (*Partiti
 // PartitionForRead returns a partition for read purposes
 func PartitionForRead(cluster *Cluster, policy *BasePolicy, key *Key) (*Partition, Error) {
 	// Must copy hashmap reference for copy on write semantics to work.
-	pmap := cluster.getPartitions()
+	pmap := cluster.GetPartitions()
 	partitions := pmap[key.namespace]
 
 	if partitions == nil {
@@ -124,7 +124,7 @@ func GetReplicaPolicySC(policy *BasePolicy) ReplicaPolicy {
 // GetNodeBatchRead returns a node for batch reads
 func GetNodeBatchRead(cluster *Cluster, key *Key, replica ReplicaPolicy, replicaSC ReplicaPolicy, prevNode *Node, sequence int, sequenceSC int) (*Node, Error) {
 	// Must copy hashmap reference for copy on write semantics to work.
-	pmap := cluster.getPartitions()
+	pmap := cluster.GetPartitions()
 	partitions := pmap[key.namespace]
 
 	if partitions == nil {
@@ -144,7 +144,7 @@ func GetNodeBatchRead(cluster *Cluster, key *Key, replica ReplicaPolicy, replica
 // GetNodeBatchWrite returns a node for batch Writes
 func GetNodeBatchWrite(cluster *Cluster, key *Key, replica ReplicaPolicy, prevNode *Node, sequence int) (*Node, Error) {
 	// Must copy hashmap reference for copy on write semantics to work.
-	pmap := cluster.getPartitions()
+	pmap := cluster.GetPartitions()
 	partitions := pmap[key.namespace]
 
 	if partitions == nil {

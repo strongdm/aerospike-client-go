@@ -169,11 +169,11 @@ func (clnt *Client) ScanPartitionObjects(apolicy *ScanPolicy, objChan interface{
 		return nil, newError(types.SERVER_NOT_AVAILABLE, "Scan failed because cluster is empty.")
 	}
 
-	var tracker *partitionTracker
+	var tracker *PartitionTracker
 	if partitionFilter == nil {
-		tracker = newPartitionTrackerForNodes(&policy.MultiPolicy, nodes)
+		tracker = NewPartitionTrackerForNodes(&policy.MultiPolicy, nodes)
 	} else {
-		tracker = newPartitionTracker(&policy.MultiPolicy, partitionFilter, nodes)
+		tracker = NewPartitionTracker(&policy.MultiPolicy, partitionFilter, nodes)
 	}
 
 	// result recordset
@@ -198,7 +198,7 @@ func (clnt *Client) ScanAllObjects(apolicy *ScanPolicy, objChan interface{}, nam
 func (clnt *Client) scanNodePartitionsObjects(apolicy *ScanPolicy, node *Node, objChan interface{}, namespace string, setName string, binNames ...string) (*Recordset, Error) {
 	policy := *clnt.getUsableScanPolicy(apolicy)
 
-	tracker := newPartitionTrackerForNode(&policy.MultiPolicy, node)
+	tracker := NewPartitionTrackerForNode(&policy.MultiPolicy, node)
 
 	// result recordset
 	res := &Recordset{
@@ -233,12 +233,12 @@ func (clnt *Client) QueryPartitionObjects(policy *QueryPolicy, statement *Statem
 		return nil, newError(types.SERVER_NOT_AVAILABLE, "Query failed because cluster is empty.")
 	}
 
-	var tracker *partitionTracker
+	var tracker *PartitionTracker
 
 	if partitionFilter == nil {
-		tracker = newPartitionTrackerForNodes(&policy.MultiPolicy, nodes)
+		tracker = NewPartitionTrackerForNodes(&policy.MultiPolicy, nodes)
 	} else {
-		tracker = newPartitionTracker(&policy.MultiPolicy, partitionFilter, nodes)
+		tracker = NewPartitionTracker(&policy.MultiPolicy, partitionFilter, nodes)
 	}
 
 	// result recordset
@@ -263,7 +263,7 @@ func (clnt *Client) QueryObjects(policy *QueryPolicy, statement *Statement, objC
 func (clnt *Client) queryNodePartitionsObjects(policy *QueryPolicy, node *Node, statement *Statement, objChan interface{}) (*Recordset, Error) {
 	policy = clnt.getUsableQueryPolicy(policy)
 
-	tracker := newPartitionTrackerForNode(&policy.MultiPolicy, node)
+	tracker := NewPartitionTrackerForNode(&policy.MultiPolicy, node)
 
 	// result recordset
 	res := &Recordset{

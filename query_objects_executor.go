@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-func (clnt *Client) queryPartitionObjects(policy *QueryPolicy, tracker *partitionTracker, statement *Statement, rs *Recordset) Error {
+func (clnt *Client) queryPartitionObjects(policy *QueryPolicy, tracker *PartitionTracker, statement *Statement, rs *Recordset) Error {
 	defer rs.signalEnd()
 
 	// for exponential backoff
@@ -31,7 +31,7 @@ func (clnt *Client) queryPartitionObjects(policy *QueryPolicy, tracker *partitio
 
 	for {
 		rs.resetTaskID()
-		list, err := tracker.assignPartitionsToNodes(clnt.Cluster(), statement.Namespace)
+		list, err := tracker.AssignPartitionsToNodes(clnt.Cluster(), statement.Namespace)
 		if err != nil {
 			tracker.partitionError()
 			return err
@@ -57,12 +57,12 @@ func (clnt *Client) queryPartitionObjects(policy *QueryPolicy, tracker *partitio
 					tracker.partitionError()
 					logger.Logger.Error("Constraint Semaphore failed for Query: %s", err.Error())
 				}
-				go func(nodePartition *nodePartitions) {
+				go func(nodePartition *NodePartitions) {
 					defer sem.Release(1)
 					defer wg.Done()
 					if err := clnt.queryNodePartitionObjects(policy, rs, tracker, nodePartition, statement); err != nil {
 						tracker.partitionError()
-						logger.Logger.Debug("Error while Executing query for node %s: %s", nodePartition.node.String(), err.Error())
+						logger.Logger.Debug("Error while Executing query for node %s: %s", nodePartition.Node.String(), err.Error())
 					}
 				}(nodePartition)
 			}
@@ -92,7 +92,7 @@ func (clnt *Client) queryPartitionObjects(policy *QueryPolicy, tracker *partitio
 
 // QueryNode reads all records in specified namespace and set for one node only.
 // If the policy is nil, the default relevant policy will be used.
-func (clnt *Client) queryNodePartitionObjects(policy *QueryPolicy, recordset *Recordset, tracker *partitionTracker, nodePartition *nodePartitions, statement *Statement) Error {
+func (clnt *Client) queryNodePartitionObjects(policy *QueryPolicy, recordset *Recordset, tracker *PartitionTracker, nodePartition *NodePartitions, statement *Statement) Error {
 	command := newQueryPartitionObjectsCommand(policy, tracker, nodePartition, statement, recordset)
 	return command.Execute()
 }
