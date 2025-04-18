@@ -34,8 +34,8 @@ type baseMultiCommand struct {
 	isOperation bool
 
 	// Used in correct Scans/Queries
-	tracker        *partitionTracker
-	nodePartitions *nodePartitions
+	tracker        *PartitionTracker
+	nodePartitions *NodePartitions
 
 	terminationErrorType types.ResultCode
 

@@ -27,8 +27,8 @@ type scanPartitionCommand struct {
 
 func newScanPartitionCommand(
 	policy *ScanPolicy,
-	tracker *partitionTracker,
-	nodePartitions *nodePartitions,
+	tracker *PartitionTracker,
+	nodePartitions *NodePartitions,
 	namespace string,
 	setName string,
 	binNames []string,
@@ -45,7 +45,7 @@ func newScanPartitionCommand(
 	cmd.terminationErrorType = types.SCAN_TERMINATED
 	cmd.tracker = tracker
 	cmd.nodePartitions = nodePartitions
-	cmd.node = nodePartitions.node
+	cmd.node = nodePartitions.Node
 
 	return cmd
 }

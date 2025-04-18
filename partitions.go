@@ -78,15 +78,15 @@ func (p *Partitions) clone() *Partitions {
 
 /*
 
-	partitionMap
+	PartitionMap
 
 */
 
-type partitionMap map[string]*Partitions
+type PartitionMap map[string]*Partitions
 
 // cleanup removes all the references stored in the lists
 // to help the GC identify the unused pointers.
-func (pm partitionMap) cleanup() {
+func (pm PartitionMap) cleanup() {
 	for ns, partitions := range pm {
 		for i := range partitions.Replicas {
 			for j := range partitions.Replicas[i] {
@@ -102,18 +102,18 @@ func (pm partitionMap) cleanup() {
 	}
 }
 
-// String implements stringer interface for partitionMap
-func (pm partitionMap) clone() partitionMap {
+// String implements stringer interface for PartitionMap
+func (pm PartitionMap) clone() PartitionMap {
 	// Make deep copy of map.
-	pmap := make(partitionMap, len(pm))
+	pmap := make(PartitionMap, len(pm))
 	for ns := range pm {
 		pmap[ns] = pm[ns].clone()
 	}
 	return pmap
 }
 
-// String implements stringer interface for partitionMap
-func (pm partitionMap) String() string {
+// String implements stringer interface for PartitionMap
+func (pm PartitionMap) String() string {
 	res := bytes.Buffer{}
 	for ns, partitions := range pm {
 		res.WriteString("-----------------------------------------------------------------------\n")
@@ -144,7 +144,7 @@ func (pm partitionMap) String() string {
 }
 
 // naively validates the partition map
-func (pm partitionMap) validate() Error {
+func (pm PartitionMap) validate() Error {
 	masterNodePartitionNotDefined := map[string][]int{}
 	replicaNodePartitionNotDefined := map[string][]int{}
 	var errs Error

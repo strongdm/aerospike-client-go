@@ -2302,7 +2302,7 @@ func (cmd *baseCommand) writeBatchFields(key *Key, fieldCount, opCount int) Erro
 	return nil
 }
 
-func (cmd *baseCommand) setScan(policy *ScanPolicy, namespace *string, setName *string, binNames []string, taskID uint64, nodePartitions *nodePartitions) Error {
+func (cmd *baseCommand) setScan(policy *ScanPolicy, namespace *string, setName *string, binNames []string, taskID uint64, nodePartitions *NodePartitions) Error {
 	cmd.begin()
 	fieldCount := 0
 
@@ -2310,9 +2310,9 @@ func (cmd *baseCommand) setScan(policy *ScanPolicy, namespace *string, setName *
 	partsPartialSize := 0
 	maxRecords := int64(0)
 	if nodePartitions != nil {
-		partsFullSize = len(nodePartitions.partsFull) * 2
-		partsPartialSize = len(nodePartitions.partsPartial) * 20
-		maxRecords = int64(nodePartitions.recordMax)
+		partsFullSize = len(nodePartitions.PartsFull) * 2
+		partsPartialSize = len(nodePartitions.PartsPartial) * 20
+		maxRecords = int64(nodePartitions.RecordMax)
 	}
 
 	predSize := 0
@@ -2395,7 +2395,7 @@ func (cmd *baseCommand) setScan(policy *ScanPolicy, namespace *string, setName *
 	if partsFullSize > 0 {
 		cmd.writeFieldHeader(partsFullSize, PID_ARRAY)
 
-		for _, part := range nodePartitions.partsFull {
+		for _, part := range nodePartitions.PartsFull {
 			cmd.WriteInt16LittleEndian(uint16(part.Id))
 		}
 	}
@@ -2403,7 +2403,7 @@ func (cmd *baseCommand) setScan(policy *ScanPolicy, namespace *string, setName *
 	if partsPartialSize > 0 {
 		cmd.writeFieldHeader(partsPartialSize, DIGEST_ARRAY)
 
-		for _, part := range nodePartitions.partsPartial {
+		for _, part := range nodePartitions.PartsPartial {
 			if _, err := cmd.Write(part.Digest[:]); err != nil {
 				return newCommonError(err)
 			}
@@ -2442,7 +2442,7 @@ func (cmd *baseCommand) setScan(policy *ScanPolicy, namespace *string, setName *
 	return nil
 }
 
-func (cmd *baseCommand) setQuery(policy *QueryPolicy, wpolicy *WritePolicy, statement *Statement, taskID uint64, operations []*Operation, background bool, nodePartitions *nodePartitions) Error {
+func (cmd *baseCommand) setQuery(policy *QueryPolicy, wpolicy *WritePolicy, statement *Statement, taskID uint64, operations []*Operation, background bool, nodePartitions *NodePartitions) Error {
 	fieldCount := 0
 	filterSize := 0
 	binNameSize := 0
@@ -2549,12 +2549,12 @@ func (cmd *baseCommand) setQuery(policy *QueryPolicy, wpolicy *WritePolicy, stat
 	// Calling query with no filters is more efficiently handled by a primary index scan.
 	// Estimate scan options size.
 	if nodePartitions != nil {
-		partsFullSize = len(nodePartitions.partsFull) * 2
-		partsPartialSize = len(nodePartitions.partsPartial) * 20
+		partsFullSize = len(nodePartitions.PartsFull) * 2
+		partsPartialSize = len(nodePartitions.PartsPartial) * 20
 		if statement.Filter != nil {
-			partsPartialBValSize = len(nodePartitions.partsPartial) * 8
+			partsPartialBValSize = len(nodePartitions.PartsPartial) * 8
 		}
-		maxRecords = nodePartitions.recordMax
+		maxRecords = nodePartitions.RecordMax
 	}
 
 	if partsFullSize > 0 {
@@ -2719,7 +2719,7 @@ func (cmd *baseCommand) setQuery(policy *QueryPolicy, wpolicy *WritePolicy, stat
 	if partsFullSize > 0 {
 		cmd.writeFieldHeader(partsFullSize, PID_ARRAY)
 
-		for _, part := range nodePartitions.partsFull {
+		for _, part := range nodePartitions.PartsFull {
 			cmd.WriteInt16LittleEndian(uint16(part.Id))
 		}
 	}
@@ -2727,7 +2727,7 @@ func (cmd *baseCommand) setQuery(policy *QueryPolicy, wpolicy *WritePolicy, stat
 	if partsPartialSize > 0 {
 		cmd.writeFieldHeader(partsPartialSize, DIGEST_ARRAY)
 
-		for _, part := range nodePartitions.partsPartial {
+		for _, part := range nodePartitions.PartsPartial {
 			if _, err := cmd.Write(part.Digest[:]); err != nil {
 				return newCommonError(err)
 			}
@@ -2737,7 +2737,7 @@ func (cmd *baseCommand) setQuery(policy *QueryPolicy, wpolicy *WritePolicy, stat
 	if partsPartialBValSize > 0 {
 		cmd.writeFieldHeader(partsPartialBValSize, BVAL_ARRAY)
 
-		for _, part := range nodePartitions.partsPartial {
+		for _, part := range nodePartitions.PartsPartial {
 			cmd.WriteInt64LittleEndian(uint64(part.BVal))
 		}
 	}
