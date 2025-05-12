@@ -40,6 +40,10 @@ type genericLogger interface {
 	Printf(format string, v ...interface{})
 }
 
+type levelLogger interface {
+	LogAtLevel(level LogPriority, format string, v ...interface{})
+}
+
 type logger struct {
 	Logger genericLogger
 
@@ -73,59 +77,35 @@ func (lgr *logger) SetLevel(level LogPriority) {
 
 // LogAtLevel will logs a message at the level requested.
 func (lgr *logger) LogAtLevel(level LogPriority, format string, v ...interface{}) {
-	switch level {
-	case DEBUG:
-		lgr.Debug(format, v...)
-	case INFO:
-		lgr.Info(format, v...)
-	case WARNING:
-		lgr.Warn(format, v...)
-	case ERR:
-		lgr.Error(format, v...)
-	case OFF:
+	if l, ok := lgr.Logger.(levelLogger); ok {
+		l.LogAtLevel(level, format, v...)
+		return
+	}
+	if lgr.level <= level {
+		if l, ok := lgr.Logger.(*log.Logger); ok {
+			l.Output(2, fmt.Sprintf(format, v...))
+		} else {
+			lgr.Logger.Printf(format, v...)
+		}
 	}
 }
 
 // Debug logs a message if log level allows to do so.
 func (lgr *logger) Debug(format string, v ...interface{}) {
-	if lgr.level <= DEBUG {
-		if l, ok := lgr.Logger.(*log.Logger); ok {
-			l.Output(2, fmt.Sprintf(format, v...))
-		} else {
-			lgr.Logger.Printf(format, v...)
-		}
-	}
+	lgr.LogAtLevel(DEBUG, format, v...)
 }
 
 // Info logs a message if log level allows to do so.
 func (lgr *logger) Info(format string, v ...interface{}) {
-	if lgr.level <= INFO {
-		if l, ok := lgr.Logger.(*log.Logger); ok {
-			l.Output(2, fmt.Sprintf(format, v...))
-		} else {
-			lgr.Logger.Printf(format, v...)
-		}
-	}
+	lgr.LogAtLevel(INFO, format, v...)
 }
 
 // Warn logs a message if log level allows to do so.
 func (lgr *logger) Warn(format string, v ...interface{}) {
-	if lgr.level <= WARNING {
-		if l, ok := lgr.Logger.(*log.Logger); ok {
-			l.Output(2, fmt.Sprintf(format, v...))
-		} else {
-			lgr.Logger.Printf(format, v...)
-		}
-	}
+	lgr.LogAtLevel(WARNING, format, v...)
 }
 
 // Error logs a message if log level allows to do so.
 func (lgr *logger) Error(format string, v ...interface{}) {
-	if lgr.level <= ERR {
-		if l, ok := lgr.Logger.(*log.Logger); ok {
-			l.Output(2, fmt.Sprintf(format, v...))
-		} else {
-			lgr.Logger.Printf(format, v...)
-		}
-	}
+	lgr.LogAtLevel(ERR, format, v...)
 }
